@@ -22,6 +22,7 @@
     --block-a:#F6F9FB;
     --block-b:#ECF2F7;
     --danger:#B5533C;
+    --success:#2E8B57;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -187,14 +188,18 @@
   }
   .goal-item.open .goal-arrow{transform:rotate(90deg);}
   .goal-tasks{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .25s ease;
+    background:var(--paper-2);
+  }
+  .goal-tasks-inner{
     display:flex;
     flex-direction:column;
     gap:6px;
     padding:8px 10px 10px;
     border-top:1px solid var(--line);
-    background:var(--paper-2);
   }
-  .goal-tasks[hidden]{display:none;}
   .task-chip{
     background:var(--paper);
     border:1px solid var(--blueprint-2);
@@ -207,6 +212,8 @@
   }
   .task-chip:active{cursor:grabbing;}
   .task-chip:hover{background:var(--center-tint);border-color:var(--amber);}
+  .task-chip[draggable="false"]{cursor:default;opacity:0.55;}
+  .task-chip[draggable="false"]:hover{background:var(--paper);border-color:var(--blueprint-2);}
 
   .custom-section{
     margin-top:16px;
@@ -255,12 +262,37 @@
   .chip-remove:hover{background:rgba(0,0,0,0.06);border-radius:3px;}
 
   .weekly-main{flex:1;min-width:0;}
-  .toolbar{
+
+  .weekly-topbar{
     display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .icon-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    padding:6px 14px;
+    border-radius:6px;
+    border:1.5px solid currentColor;
+    background:var(--paper);
+    cursor:pointer;
+  }
+  .icon-btn:hover{background:var(--paper-2);}
+  .clear-btn{color:var(--ink);}
+  .edit-btn{color:var(--success);}
+  .edit-btn.editing{color:var(--danger);}
+
+  .toolbar{
+    display:none;
     gap:8px;
     margin-bottom:10px;
     flex-wrap:wrap;
   }
+  .toolbar.visible{display:flex;}
   .toolbar button{
     font-family:'IBM Plex Mono',monospace;
     font-size:0.76rem;
@@ -324,15 +356,33 @@
     position:relative;
     height:100%;
     display:flex;
-    align-items:center;
+    align-items:stretch;
     padding:3px 6px;
   }
+  .cell-inner.has-clear{padding-right:22px;}
+  .cell-box{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    padding:2px 5px;
+    min-width:0;
+  }
+  .cell-box.status-unchecked{border-color:var(--amber);}
+  .cell-box.status-checked{border-color:var(--success);}
   .cell-content{
-    font-size:0.76rem;
-    line-height:1.25;
+    flex:1;
+    min-width:0;
+    font-size:0.74rem;
+    line-height:1.2;
     color:var(--ink);
     word-break:break-word;
+    text-align:center;
   }
+  .cell-box.status-unchecked .cell-content{color:var(--amber);}
+  .cell-box.status-checked .cell-content{color:var(--success);}
   .cell-clear{
     position:absolute;
     top:2px;
@@ -346,6 +396,23 @@
     padding:2px 4px;
   }
   .cell-clear:hover{background:var(--paper-2);border-radius:3px;}
+  .cell-check{
+    flex-shrink:0;
+    width:15px;
+    height:15px;
+    padding:0;
+    border-radius:4px;
+    border:1.5px solid var(--amber);
+    background:transparent;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .cell-check svg{width:9px;height:9px;opacity:0;}
+  .cell-check.checked{border-color:var(--success);background:var(--success);}
+  .cell-check.checked svg{opacity:1;}
+  .cell-check svg path{stroke:#fff;}
 
   @media (max-width: 720px){
     .weekly-layout{flex-direction:column;}
@@ -385,10 +452,19 @@
         </div>
       </aside>
       <div class="weekly-main">
+        <div class="weekly-topbar">
+          <button id="btn-clear-week" class="icon-btn clear-btn" type="button">
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
+            清除
+          </button>
+          <button id="btn-edit-toggle" class="icon-btn edit-btn" type="button">
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l1-4L13 4l3 3-9 9-4 1z"/><path d="M11 6l3 3"/></svg>
+            編輯
+          </button>
+        </div>
         <div class="toolbar">
           <button id="btn-merge" class="primary" disabled>合併選取儲存格</button>
           <button id="btn-unmerge" disabled>取消合併</button>
-          <button id="btn-clear-sel">清除選取</button>
         </div>
         <div id="weekly-table-wrap">
           <table id="weekly-table"></table>
@@ -431,8 +507,9 @@
   });
 
   let mandalaData = {}; // "x-y" -> text
-  let weeklyGrid = null; // [row][col] = {content, rowSpan, colSpan, hidden}
+  let weeklyGrid = null; // [row][col] = {content, rowSpan, colSpan, hidden, checked}
   let customItems = []; // array of strings, user-added "其他" items
+  let editMode = false; // false = 鎖定/檢視模式(顯示打勾), true = 編輯模式(可拖曳修改)
 
   function pad(n){ return n<10 ? '0'+n : ''+n; }
   function key(x,y){ return x+'-'+y; }
@@ -535,28 +612,43 @@
   function buildGoalList(){
     const container = document.getElementById('goal-list');
     container.innerHTML = CENTER_ORDER.map(function(pair, i){
-      const text = mandalaData[key(pair[0], pair[1])] || '未命名領域';
+      const text = mandalaData[key(pair[0], pair[1])];
+      if(!text) return ''; // 尚未命名的領域,不顯示在週計畫側欄
       const tasks = getTasksFor(pair[0], pair[1]);
       const tasksHtml = tasks.map(function(t){
-        const ttext = mandalaData[key(t[0], t[1])] || '未命名項目';
-        return '<div class="task-chip" draggable="true" data-label="'+escapeHtml(ttext)+'">'+escapeHtml(ttext)+'</div>';
+        const ttext = mandalaData[key(t[0], t[1])];
+        if(!ttext) return ''; // 尚未命名的子項目,不顯示
+        return '<div class="task-chip" draggable="'+editMode+'" data-label="'+escapeHtml(ttext)+'">'+escapeHtml(ttext)+'</div>';
       }).join('');
       return '<div class="goal-item" data-idx="'+i+'">'
            +   '<div class="goal-row"><span class="goal-label">'+escapeHtml(text)+'</span><span class="goal-arrow">▸</span></div>'
-           +   '<div class="goal-tasks" hidden>'+tasksHtml+'</div>'
+           +   '<div class="goal-tasks"><div class="goal-tasks-inner">'+tasksHtml+'</div></div>'
            + '</div>';
     }).join('');
+    function setItemOpen(item, isOpen){
+      const tasksEl = item.querySelector('.goal-tasks');
+      if(isOpen){
+        item.classList.add('open');
+        tasksEl.style.maxHeight = tasksEl.scrollHeight + 'px';
+      } else {
+        item.classList.remove('open');
+        tasksEl.style.maxHeight = '0px';
+      }
+    }
     container.querySelectorAll('.goal-row').forEach(function(row){
       row.addEventListener('click', function(){
         const item = row.parentElement;
-        const tasksEl = item.querySelector('.goal-tasks');
-        const isOpen = item.classList.toggle('open');
-        tasksEl.hidden = !isOpen;
+        const willOpen = !item.classList.contains('open');
+        container.querySelectorAll('.goal-item.open').forEach(function(other){
+          if(other !== item) setItemOpen(other, false);
+        });
+        setItemOpen(item, willOpen);
       });
     });
     container.querySelectorAll('.task-chip').forEach(function(chip){
       chip.addEventListener('dragstart', function(e){
         e.dataTransfer.setData('text/plain', chip.dataset.label);
+        e.dataTransfer.setData('application/x-chip-source', 'goal');
       });
     });
   }
@@ -564,7 +656,7 @@
   function buildCustomList(){
     const list = document.getElementById('custom-list');
     list.innerHTML = customItems.map(function(text, i){
-      return '<div class="task-chip custom" draggable="true" data-label="'+escapeHtml(text)+'">'
+      return '<div class="task-chip custom" draggable="'+editMode+'" data-label="'+escapeHtml(text)+'">'
            +   escapeHtml(text)
            +   '<button class="chip-remove" data-i="'+i+'">×</button>'
            + '</div>';
@@ -572,6 +664,7 @@
     list.querySelectorAll('.task-chip.custom').forEach(function(chip){
       chip.addEventListener('dragstart', function(e){
         e.dataTransfer.setData('text/plain', chip.dataset.label);
+        e.dataTransfer.setData('application/x-chip-source', 'custom');
       });
     });
     list.querySelectorAll('.chip-remove').forEach(function(btn){
@@ -601,13 +694,13 @@
   }
 
   // ---------------- Weekly table ----------------
-  function initWeeklyGrid(){
-    if(weeklyGrid) return;
+  function initWeeklyGrid(force){
+    if(weeklyGrid && !force) return;
     weeklyGrid = [];
     for(let r=0;r<ROWS;r++){
       const row = [];
       for(let c=0;c<COLS;c++){
-        row.push({content:'', rowSpan:1, colSpan:1, hidden:false});
+        row.push({content:'', rowSpan:1, colSpan:1, hidden:false, checked:false, isCustom:false});
       }
       weeklyGrid.push(row);
     }
@@ -624,10 +717,25 @@
         const cs = weeklyGrid[r][c];
         if(cs.hidden) continue;
         const rs = cs.rowSpan||1, colspan = cs.colSpan||1;
+        const hasContent = !!cs.content;
+        const isCustom = !!cs.isCustom;
+        const showCheckbox = !editMode && hasContent && !isCustom;
+        const statusClass = showCheckbox ? (cs.checked ? 'status-checked' : 'status-unchecked') : '';
+        const checkInner = showCheckbox
+          ? '<button class="cell-check'+(cs.checked?' checked':'')+'" data-r="'+r+'" data-c="'+c+'" title="標記完成">'
+            + '<svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-9" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+            + '</button>'
+          : '';
+        const boxHtml = hasContent
+          ? '<div class="cell-box '+statusClass+'"><span class="cell-content">'+escapeHtml(cs.content)+'</span>'+checkInner+'</div>'
+          : '';
+        const showClear = editMode && hasContent;
+        const clearBtn = showClear
+          ? '<button class="cell-clear" data-r="'+r+'" data-c="'+c+'">×</button>'
+          : '';
         html += '<td class="w-cell" data-r="'+r+'" data-c="'+c+'" rowspan="'+rs+'" colspan="'+colspan+'">'
-              + '<div class="cell-inner">'
-              + '<span class="cell-content">'+escapeHtml(cs.content||'')+'</span>'
-              + (cs.content ? '<button class="cell-clear" data-r="'+r+'" data-c="'+c+'">×</button>' : '')
+              + '<div class="cell-inner'+(showClear?' has-clear':'')+'">'
+              + boxHtml + clearBtn
               + '</div></td>';
       }
       html += '</tr>';
@@ -647,6 +755,7 @@
     const table = document.getElementById('weekly-table');
     table.querySelectorAll('td.w-cell').forEach(function(td){
       td.addEventListener('mousedown', function(e){
+        if(!editMode) return;
         if(e.target.classList.contains('cell-clear')) return;
         selecting = true;
         const r = +td.dataset.r, c = +td.dataset.c;
@@ -655,18 +764,27 @@
         e.preventDefault();
       });
       td.addEventListener('mouseenter', function(){
+        if(!editMode) return;
         if(!selecting) return;
         updateSelectionRect(+td.dataset.r, +td.dataset.c);
       });
-      td.addEventListener('dragover', function(e){ e.preventDefault(); td.classList.add('drag-over'); });
+      td.addEventListener('dragover', function(e){
+        if(!editMode) return;
+        e.preventDefault();
+        td.classList.add('drag-over');
+      });
       td.addEventListener('dragleave', function(){ td.classList.remove('drag-over'); });
       td.addEventListener('drop', function(e){
+        if(!editMode) return;
         e.preventDefault();
         td.classList.remove('drag-over');
         const label = e.dataTransfer.getData('text/plain');
         if(!label) return;
+        const source = e.dataTransfer.getData('application/x-chip-source');
         const r = +td.dataset.r, c = +td.dataset.c;
         weeklyGrid[r][c].content = label;
+        weeklyGrid[r][c].checked = false;
+        weeklyGrid[r][c].isCustom = (source === 'custom');
         buildWeeklyTable();
         saveWeekly();
       });
@@ -676,6 +794,16 @@
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
         weeklyGrid[r][c].content = '';
+        weeklyGrid[r][c].checked = false;
+        buildWeeklyTable();
+        saveWeekly();
+      });
+    });
+    table.querySelectorAll('.cell-check').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        const r = +btn.dataset.r, c = +btn.dataset.c;
+        weeklyGrid[r][c].checked = !weeklyGrid[r][c].checked;
         buildWeeklyTable();
         saveWeekly();
       });
@@ -755,7 +883,7 @@
     for(let r=r0;r<=r1;r++){
       for(let c=c0;c<=c1;c++){
         if(r===r0 && c===c0) continue;
-        weeklyGrid[r][c] = {content:'', rowSpan:1, colSpan:1, hidden:true};
+        weeklyGrid[r][c] = {content:'', rowSpan:1, colSpan:1, hidden:true, checked:false, isCustom:false};
       }
     }
     clearSelection();
@@ -769,9 +897,12 @@
     const origin = weeklyGrid[r][c];
     const rs = origin.rowSpan||1, colspan = origin.colSpan||1;
     const savedContent = origin.content;
+    const savedChecked = origin.checked;
+    const savedIsCustom = origin.isCustom;
     for(let rr=r; rr<r+rs; rr++){
       for(let cc=c; cc<c+colspan; cc++){
-        weeklyGrid[rr][cc] = {content:(rr===r && cc===c)? savedContent : '', rowSpan:1, colSpan:1, hidden:false};
+        const isOrigin = (rr===r && cc===c);
+        weeklyGrid[rr][cc] = {content:isOrigin? savedContent : '', rowSpan:1, colSpan:1, hidden:false, checked:isOrigin? savedChecked : false, isCustom:isOrigin? savedIsCustom : false};
       }
     }
     clearSelection();
@@ -799,7 +930,43 @@
   function setupToolbar(){
     document.getElementById('btn-merge').addEventListener('click', mergeSelection);
     document.getElementById('btn-unmerge').addEventListener('click', unmergeSelection);
-    document.getElementById('btn-clear-sel').addEventListener('click', clearSelection);
+  }
+
+  const EDIT_ICON = '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l1-4L13 4l3 3-9 9-4 1z"/><path d="M11 6l3 3"/></svg>編輯';
+  const SAVE_ICON = '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10l4 4 8-9" stroke-linecap="round" stroke-linejoin="round"/></svg>儲存';
+
+  function updateEditUI(){
+    const editBtn = document.getElementById('btn-edit-toggle');
+    const toolbar = document.querySelector('.toolbar');
+    if(editMode){
+      editBtn.innerHTML = SAVE_ICON;
+      editBtn.classList.add('editing');
+      toolbar.classList.add('visible');
+    } else {
+      editBtn.innerHTML = EDIT_ICON;
+      editBtn.classList.remove('editing');
+      toolbar.classList.remove('visible');
+      clearSelection();
+    }
+  }
+
+  function setupTopbar(){
+    document.getElementById('btn-edit-toggle').addEventListener('click', function(){
+      editMode = !editMode;
+      updateEditUI();
+      buildGoalList();
+      buildCustomList();
+      buildWeeklyTable();
+    });
+    document.getElementById('btn-clear-week').addEventListener('click', function(){
+      const ok = confirm('確定要清空本週所有內容、打勾記錄與合併版面嗎?此動作無法復原。');
+      if(!ok) return;
+      clearSelection();
+      initWeeklyGrid(true);
+      buildWeeklyTable();
+      saveWeekly();
+    });
+    updateEditUI();
   }
 
   async function init(){
@@ -812,6 +979,7 @@
     setupCustomInput();
     setupTabs();
     setupToolbar();
+    setupTopbar();
   }
 
   if(document.readyState === 'loading'){
