@@ -601,16 +601,25 @@
     .agenda-list{
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:0;
+      margin-left:-20px;
+      margin-right:-20px;
     }
     .agenda-item{
       display:flex;
       align-items:center;
       gap:10px;
-      padding:8px 10px;
-      border:1px solid var(--line);
-      border-radius:8px;
-      background:var(--paper);
+      padding:12px 20px;
+      border:none;
+      border-bottom:1px dashed var(--line);
+      border-radius:0;
+      background:transparent;
+    }
+    .agenda-item:last-child{
+      border-bottom:none;
+    }
+    .agenda-item.drag-over{
+      background:var(--block-b);
     }
     .agenda-time{
       font-family:'IBM Plex Mono',monospace;
@@ -619,16 +628,35 @@
       width:74px;
       flex-shrink:0;
       line-height:1.3;
+      text-align:left;
+      align-self:center;
     }
     .agenda-body{flex:1;min-width:0;}
     .agenda-body .cell-inner{padding:0;}
     .agenda-item.empty{
-      border-style:dashed;
       opacity:0.6;
     }
   }
   @media (min-width: 721px){
     .mobile-only{display:none;}
+  }
+
+  .chip-drag-ghost{
+    position:fixed;
+    z-index:200;
+    pointer-events:none;
+    transform:translate(-50%, -120%);
+    background:var(--center-tint);
+    border:1.5px solid var(--amber);
+    color:var(--ink);
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:0.82rem;
+    max-width:200px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.18);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 </style>
 </head>
@@ -948,7 +976,7 @@
       const tasksHtml = tasks.map(function(t){
         const ttext = mandalaData[key(t[0], t[1])];
         if(!ttext) return ''; // 尚未命名的子項目,不顯示
-        return '<div class="task-chip" draggable="'+editMode+'" data-label="'+escapeHtml(ttext)+'">'+escapeHtml(ttext)+'</div>';
+        return '<div class="task-chip" draggable="'+editMode+'" data-label="'+escapeHtml(ttext)+'" data-source="goal">'+escapeHtml(ttext)+'</div>';
       }).join('');
       return '<div class="goal-item" data-idx="'+i+'">'
            +   '<div class="goal-row"><span class="goal-label">'+escapeHtml(text)+'</span><span class="goal-arrow">▸</span></div>'
@@ -980,13 +1008,14 @@
         e.dataTransfer.setData('text/plain', chip.dataset.label);
         e.dataTransfer.setData('application/x-chip-source', 'goal');
       });
+      attachChipTouchDrag(chip);
     });
   }
 
   function buildCustomList(){
     const list = document.getElementById('custom-list');
     list.innerHTML = customItems.map(function(text, i){
-      return '<div class="task-chip custom" draggable="'+editMode+'" data-label="'+escapeHtml(text)+'">'
+      return '<div class="task-chip custom" draggable="'+editMode+'" data-label="'+escapeHtml(text)+'" data-source="custom">'
            +   escapeHtml(text)
            +   '<button class="chip-remove" data-i="'+i+'">×</button>'
            + '</div>';
@@ -996,6 +1025,7 @@
         e.dataTransfer.setData('text/plain', chip.dataset.label);
         e.dataTransfer.setData('application/x-chip-source', 'custom');
       });
+      attachChipTouchDrag(chip);
     });
     list.querySelectorAll('.chip-remove').forEach(function(btn){
       btn.addEventListener('click', function(e){
@@ -1118,7 +1148,7 @@
           ? HOURS[origin.r].split('–')[0] + '–' + HOURS[origin.r + origin.rowSpan - 1].split('–')[1]
           : HOURS[origin.r];
         const rendered = renderCellMarkup(origin.cell, origin.r, origin.c);
-        html += '<div class="agenda-item'+(rendered.hasContent?'':' empty')+'">'
+        html += '<div class="agenda-item'+(rendered.hasContent?'':' empty')+'" data-r="'+origin.r+'" data-c="'+origin.c+'">'
               + '<div class="agenda-time">'+timeLabel+'</div>'
               + '<div class="agenda-body">'+rendered.html+'</div>'
               + '</div>';
@@ -1152,6 +1182,30 @@
         saveWeekly();
       });
     });
+    // 有些手機瀏覽器(例如 iOS Safari 長按)支援原生的 HTML5 拖曳，
+    // 所以這裡也要幫每個時段掛上 dragover/drop，不能只靠 touch 模擬那一套。
+    list.querySelectorAll('.agenda-item').forEach(function(item){
+      item.addEventListener('dragover', function(e){
+        if(!editMode) return;
+        e.preventDefault();
+        item.classList.add('drag-over');
+      });
+      item.addEventListener('dragleave', function(){ item.classList.remove('drag-over'); });
+      item.addEventListener('drop', function(e){
+        if(!editMode) return;
+        e.preventDefault();
+        item.classList.remove('drag-over');
+        const label = e.dataTransfer.getData('text/plain');
+        if(!label) return;
+        const source = e.dataTransfer.getData('application/x-chip-source');
+        const r = +item.dataset.r, c = +item.dataset.c;
+        weeklyGrid[r][c].content = label;
+        weeklyGrid[r][c].checked = false;
+        weeklyGrid[r][c].isCustom = (source === 'custom');
+        buildWeeklyTable();
+        saveWeekly();
+      });
+    });
   }
 
   function setupMobileDaySwitcher(){
@@ -1169,6 +1223,62 @@
   let selecting = false;
   let selStart = null; // {r,c}
   let selCells = []; // array of {r,c}
+
+  // ---------------- Touch drag (mobile) ----------------
+  // 手機/平板的觸控螢幕不會觸發 HTML5 原生的 dragstart/drop 事件，
+  // 所以另外用 touchstart/touchmove/touchend 模擬「拖曳到某個時段」的操作，
+  // 邏輯上跟桌面版的 drop 事件做一樣的事:把 label 填進目標儲存格。
+  let touchDrag = null; // {ghost, label, source, lastTarget}
+
+  function findDropTarget(x, y){
+    const el = document.elementFromPoint(x, y);
+    if(!el) return null;
+    return el.closest('.agenda-item[data-r], td.w-cell[data-r]');
+  }
+
+  function attachChipTouchDrag(chip){
+    chip.addEventListener('touchstart', function(e){
+      if(!editMode) return;
+      const touch = e.touches[0];
+      const ghost = document.createElement('div');
+      ghost.className = 'chip-drag-ghost';
+      ghost.textContent = chip.dataset.label;
+      document.body.appendChild(ghost);
+      ghost.style.left = touch.clientX + 'px';
+      ghost.style.top = touch.clientY + 'px';
+      touchDrag = { ghost: ghost, label: chip.dataset.label, source: chip.dataset.source, lastTarget: null };
+    }, {passive:true});
+  }
+
+  document.addEventListener('touchmove', function(e){
+    if(!touchDrag) return;
+    e.preventDefault(); // 拖曳中要擋掉頁面捲動
+    const touch = e.touches[0];
+    touchDrag.ghost.style.left = touch.clientX + 'px';
+    touchDrag.ghost.style.top = touch.clientY + 'px';
+    const target = findDropTarget(touch.clientX, touch.clientY);
+    if(touchDrag.lastTarget && touchDrag.lastTarget !== target){
+      touchDrag.lastTarget.classList.remove('drag-over');
+    }
+    if(target) target.classList.add('drag-over');
+    touchDrag.lastTarget = target;
+  }, {passive:false});
+
+  document.addEventListener('touchend', function(){
+    if(!touchDrag) return;
+    const state = touchDrag;
+    touchDrag = null;
+    state.ghost.remove();
+    if(state.lastTarget){
+      state.lastTarget.classList.remove('drag-over');
+      const r = +state.lastTarget.dataset.r, c = +state.lastTarget.dataset.c;
+      weeklyGrid[r][c].content = state.label;
+      weeklyGrid[r][c].checked = false;
+      weeklyGrid[r][c].isCustom = (state.source === 'custom');
+      buildWeeklyTable();
+      saveWeekly();
+    }
+  });
 
   function attachCellHandlers(){
     const table = document.getElementById('weekly-table');
