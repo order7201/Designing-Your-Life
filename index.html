@@ -538,6 +538,7 @@
   .cell-check svg path{stroke:#fff;}
 
   @media (max-width: 720px){
+    body{overflow-x:hidden;}
     .weekly-layout{flex-direction:column;}
     aside.sidebar{width:100%;flex:none;}
     #mandala-grid{grid-template-columns: repeat(9, minmax(38px, 1fr));}
@@ -602,8 +603,6 @@
       display:flex;
       flex-direction:column;
       gap:0;
-      margin-left:-20px;
-      margin-right:-20px;
     }
     .agenda-item{
       display:flex;
@@ -1159,7 +1158,31 @@
     }
     list.innerHTML = html;
     attachAgendaHandlers();
+    adjustAgendaFullBleed();
   }
+
+  // 用 JS 實際量測 #agenda-list 距離螢幕左右邊緣的精確像素，直接設成負的 margin，
+  // 讓分隔線真正貼齊螢幕邊緣。這個做法比用 vw / 百分比去猜內距準確，
+  // 不管外層巢狀容器的內距是多少都能算對。
+  function adjustAgendaFullBleed(){
+    const list = document.getElementById('agenda-list');
+    if(!list) return;
+    // 先清掉，量測「沒有額外邊距時」的原始位置
+    list.style.marginLeft = '';
+    list.style.marginRight = '';
+    if(window.innerWidth > 720) return; // 只在手機版套用
+    const rect = list.getBoundingClientRect();
+    const leftGap = rect.left;
+    const rightGap = window.innerWidth - rect.right;
+    list.style.marginLeft = (-leftGap) + 'px';
+    list.style.marginRight = (-rightGap) + 'px';
+  }
+
+  let agendaResizeTimer = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(agendaResizeTimer);
+    agendaResizeTimer = setTimeout(adjustAgendaFullBleed, 150);
+  });
 
   function attachAgendaHandlers(){
     const list = document.getElementById('agenda-list');
