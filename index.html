@@ -69,6 +69,129 @@
     letter-spacing:0.04em;
   }
 
+  .bottom-tabs{display:none;}
+  .mobile-only{display:none;}
+  .desktop-only{display:block;}
+
+  .sync-fab{
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:50;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    padding:7px 14px;
+    border-radius:20px;
+    border:1.5px solid var(--blueprint-2);
+    background:var(--paper);
+    color:var(--ink);
+    cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  }
+  .sync-fab:hover{border-color:var(--amber);}
+
+  .sync-modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(31,42,55,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .sync-modal-overlay[hidden]{display:none;}
+  .sync-modal{
+    position:relative;
+    background:var(--paper);
+    border-radius:12px;
+    padding:26px 24px 22px;
+    max-width:380px;
+    width:100%;
+    box-shadow:0 10px 30px rgba(0,0,0,0.22);
+  }
+  .sync-modal h3{
+    font-family:'Fraunces',serif;
+    margin:0 0 8px;
+    font-size:1.3rem;
+  }
+  .sync-modal-desc{
+    font-size:0.8rem;
+    color:var(--slate);
+    line-height:1.5;
+    margin:0 0 16px;
+  }
+  .sync-code-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .sync-code-row input{
+    flex:1;
+    min-width:0;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.95rem;
+    padding:8px 10px;
+    border:1.5px solid var(--line);
+    border-radius:6px;
+    background:var(--paper-2);
+    color:var(--ink);
+  }
+  .sync-code-row button{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    padding:8px 12px;
+    border-radius:6px;
+    border:1.5px solid var(--blueprint-2);
+    background:var(--paper);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .sync-modal-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .sync-modal-actions button{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    padding:8px 12px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .sync-modal-actions button.primary{
+    background:var(--ink);
+    color:var(--paper);
+    border:1.5px solid var(--ink);
+  }
+  .sync-modal-actions button:not(.primary){
+    background:var(--paper);
+    border:1.5px solid var(--line);
+    color:var(--ink);
+  }
+  .sync-copy-msg{
+    margin-top:10px;
+    font-size:0.78rem;
+    color:var(--success);
+  }
+  .sync-copy-msg[hidden]{display:none;}
+  .sync-modal-close{
+    position:absolute;
+    top:8px;
+    right:10px;
+    background:transparent;
+    border:none;
+    font-size:1.2rem;
+    line-height:1;
+    cursor:pointer;
+    color:var(--slate);
+    padding:4px 7px;
+  }
+  .sync-modal-close:hover{color:var(--ink);}
+
   nav.tabs{
     display:flex;
     gap:2px;
@@ -418,11 +541,118 @@
     .weekly-layout{flex-direction:column;}
     aside.sidebar{width:100%;flex:none;}
     #mandala-grid{grid-template-columns: repeat(9, minmax(38px, 1fr));}
+
+    nav.tabs{display:none;}
+    .bottom-tabs{
+      display:flex;
+      position:fixed;
+      left:0; right:0; bottom:0;
+      background:var(--paper);
+      border-top:1px solid var(--line);
+      padding:6px 0 max(6px, env(safe-area-inset-bottom));
+      z-index:60;
+      box-shadow:0 -2px 10px rgba(0,0,0,0.08);
+    }
+    .bottom-tabs button{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:2px;
+      background:none;
+      border:none;
+      font-family:'IBM Plex Mono',monospace;
+      font-size:0.68rem;
+      color:var(--slate);
+      padding:4px 0;
+      cursor:pointer;
+    }
+    .bottom-tabs button.active{color:var(--ink);font-weight:600;}
+    .btab-icon{font-size:1.25rem;line-height:1;}
+    .app-shell{padding-bottom:74px;}
+
+    .desktop-only{display:none;}
+    .mobile-only{display:block;}
+
+    .day-switcher{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      padding:6px 0 14px;
+    }
+    .day-label{
+      font-family:'Fraunces',serif;
+      font-size:1.15rem;
+      min-width:64px;
+      text-align:center;
+    }
+    .day-arrow{
+      background:var(--paper-2);
+      border:1.5px solid var(--line);
+      color:var(--ink);
+      width:34px;
+      height:34px;
+      border-radius:50%;
+      font-size:1.2rem;
+      line-height:1;
+      cursor:pointer;
+    }
+    .agenda-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .agenda-item{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:var(--paper);
+    }
+    .agenda-time{
+      font-family:'IBM Plex Mono',monospace;
+      font-size:0.68rem;
+      color:var(--slate);
+      width:74px;
+      flex-shrink:0;
+      line-height:1.3;
+    }
+    .agenda-body{flex:1;min-width:0;}
+    .agenda-body .cell-inner{padding:0;}
+    .agenda-item.empty{
+      border-style:dashed;
+      opacity:0.6;
+    }
+  }
+  @media (min-width: 721px){
+    .mobile-only{display:none;}
   }
 </style>
 </head>
 <body>
 <div class="app-shell">
+
+  <button id="btn-sync-code" class="sync-fab" type="button" title="同步碼">🔑 同步碼</button>
+
+  <div id="sync-modal" class="sync-modal-overlay" hidden>
+    <div class="sync-modal">
+      <button id="btn-close-sync" class="sync-modal-close" type="button">×</button>
+      <h3>同步碼</h3>
+      <p class="sync-modal-desc">這是這台裝置目前使用的識別碼。之後接上雲端同步後,只要在其他裝置輸入同一組碼,就能讀取同一份資料。</p>
+      <div class="sync-code-row">
+        <input id="sync-code-input" type="text" spellcheck="false" autocomplete="off">
+        <button id="btn-copy-sync" type="button">複製</button>
+      </div>
+      <div class="sync-modal-actions">
+        <button id="btn-save-sync" class="primary" type="button">儲存自訂代碼</button>
+        <button id="btn-regen-sync" type="button">重新產生隨機碼</button>
+      </div>
+      <div id="sync-copy-msg" class="sync-copy-msg" hidden></div>
+    </div>
+  </div>
 
   <header class="hero">
     <h1>Designing Your Life</h1>
@@ -432,6 +662,17 @@
   <nav class="tabs">
     <button id="tab-mandala" class="active">曼陀羅九宮格</button>
     <button id="tab-weekly">週計畫</button>
+  </nav>
+
+  <nav class="bottom-tabs">
+    <button id="btab-mandala" class="active">
+      <span class="btab-icon">▦</span>
+      <span class="btab-label">九宮格</span>
+    </button>
+    <button id="btab-weekly">
+      <span class="btab-icon">▤</span>
+      <span class="btab-label">週計畫</span>
+    </button>
   </nav>
 
   <section id="panel-mandala" class="panel active">
@@ -466,8 +707,16 @@
           <button id="btn-merge" class="primary" disabled>合併選取儲存格</button>
           <button id="btn-unmerge" disabled>取消合併</button>
         </div>
-        <div id="weekly-table-wrap">
+        <div id="weekly-table-wrap" class="desktop-only">
           <table id="weekly-table"></table>
+        </div>
+        <div id="weekly-mobile-agenda" class="mobile-only">
+          <div class="day-switcher">
+            <button id="btn-day-prev" class="day-arrow" type="button" aria-label="前一天">‹</button>
+            <span id="day-switcher-label" class="day-label">週一</span>
+            <button id="btn-day-next" class="day-arrow" type="button" aria-label="後一天">›</button>
+          </div>
+          <div id="agenda-list" class="agenda-list"></div>
         </div>
       </div>
     </div>
@@ -475,9 +724,33 @@
 
 </div>
 
+<!-- Firebase SDK（compat 版本，不需要 build tool，直接用 <script> 載入即可） -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <script>
 (function(){
   "use strict";
+
+  // ---------------- Firebase 設定 ----------------
+  // 這裡貼上你自己在 Firebase 主控台「專案設定 > 一般 > 你的應用程式」看到的 firebaseConfig。
+  // 範例格式(請替換成你自己的值):
+  const firebaseConfig = {
+    apiKey: "AIzaSyDwmudrmhVx_jIofCLQCUFtg9aPTs37pL0",
+    authDomain: "designing-your-life-93bc8.firebaseapp.com",
+    projectId: "designing-your-life-93bc8",
+    storageBucket: "designing-your-life-93bc8.firebasestorage.app",
+    messagingSenderId: "501571594501",
+    appId: "1:501571594501:web:e33afd9f7f546a3b9aef6c"
+  };
+
+  let db = null;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }catch(e){
+    console.error('Firebase 初始化失敗，請確認 firebaseConfig 是否已正確填寫', e);
+  }
 
   const DAYS = ['週一','週二','週三','週四','週五','週六','週日'];
   const HOUR_START = 7, HOUR_END = 22; // 07:00-08:00 ... 22:00-23:00
@@ -526,8 +799,8 @@
   }
 
   // ---------------- Storage ----------------
-  // 使用瀏覽器內建的 localStorage，資料會留存在「這一台裝置的這一個瀏覽器」裡，
-  // 不會跨裝置同步，也不會在不同使用者之間共享。
+  // 本地: 瀏覽器內建的 localStorage，作為離線快取、也是畫面能立刻反應的來源。
+  // 雲端: Firebase Firestore，用「同步碼」當作 document ID，讓不同裝置能讀到同一份資料。
   async function loadAll(){
     try{
       const v = localStorage.getItem('mandala-cells');
@@ -542,22 +815,77 @@
       if(v) customItems = JSON.parse(v);
     }catch(e){ /* no saved data yet */ }
   }
+
+  // ---- 雲端同步（Firestore）----
+  // 所有雲端存取都集中在這兩個函式，之後若想換成 Supabase 或其他後端，
+  // 只需要改這裡的內部實作，其他程式碼完全不用動。
+  let cloudPushTimer = null;
+  function scheduleCloudPush(){
+    if(!db) return; // 尚未設定 firebaseConfig 時，安靜地略過，不影響本地功能
+    clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(cloudPush, 800);
+  }
+
+  async function cloudPush(){
+    if(!db) return;
+    const code = getSyncCode();
+    try{
+      await db.collection('synced-data').doc(code).set({
+        mandala: mandalaData,
+        weekly: weeklyGrid,
+        customItems: customItems,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }catch(e){
+      console.error('雲端同步失敗(寫入)', e);
+    }
+  }
+
+  // 從雲端把某個同步碼的資料整份抓下來，蓋掉目前畫面上的資料並重新渲染。
+  // 用於: 開啟網站時自動抓一次、或使用者輸入別台裝置用過的同步碼時。
+  async function cloudPull(code){
+    if(!db) return false;
+    try{
+      const snap = await db.collection('synced-data').doc(code).get();
+      if(!snap.exists) return false;
+      const data = snap.data();
+      if(data.mandala) mandalaData = data.mandala;
+      if(data.weekly) weeklyGrid = data.weekly;
+      if(data.customItems) customItems = data.customItems;
+      await saveMandala(true);
+      await saveWeekly(true);
+      await saveCustomItems(true);
+      buildMandala();
+      initWeeklyGrid();
+      buildWeeklyTable();
+      buildGoalList();
+      buildCustomList();
+      return true;
+    }catch(e){
+      console.error('雲端同步失敗(讀取)', e);
+      return false;
+    }
+  }
+
   let mandalaSaveTimer = null;
   function scheduleSaveMandala(){
     clearTimeout(mandalaSaveTimer);
     mandalaSaveTimer = setTimeout(saveMandala, 500);
   }
-  async function saveMandala(){
+  async function saveMandala(skipCloud){
     try{ localStorage.setItem('mandala-cells', JSON.stringify(mandalaData)); }
     catch(e){ console.error('儲存九宮格失敗', e); }
+    if(!skipCloud) scheduleCloudPush();
   }
-  async function saveWeekly(){
+  async function saveWeekly(skipCloud){
     try{ localStorage.setItem('weekly-grid', JSON.stringify(weeklyGrid)); }
     catch(e){ console.error('儲存週計畫失敗', e); }
+    if(!skipCloud) scheduleCloudPush();
   }
-  async function saveCustomItems(){
+  async function saveCustomItems(skipCloud){
     try{ localStorage.setItem('custom-items', JSON.stringify(customItems)); }
     catch(e){ console.error('儲存其他項目失敗', e); }
+    if(!skipCloud) scheduleCloudPush();
   }
 
   // ---------------- Mandala grid ----------------
@@ -706,6 +1034,30 @@
     }
   }
 
+  function renderCellMarkup(cs, r, c){
+    const hasContent = !!cs.content;
+    const isCustom = !!cs.isCustom;
+    const showCheckbox = !editMode && hasContent && !isCustom;
+    const statusClass = showCheckbox ? (cs.checked ? 'status-checked' : 'status-unchecked') : '';
+    const checkInner = showCheckbox
+      ? '<button class="cell-check'+(cs.checked?' checked':'')+'" data-r="'+r+'" data-c="'+c+'" title="標記完成">'
+        + '<svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-9" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        + '</button>'
+      : '';
+    const boxHtml = hasContent
+      ? '<div class="cell-box '+statusClass+'"><span class="cell-content">'+escapeHtml(cs.content)+'</span>'+checkInner+'</div>'
+      : '';
+    const showClear = editMode && hasContent;
+    const clearBtn = showClear
+      ? '<button class="cell-clear" data-r="'+r+'" data-c="'+c+'">×</button>'
+      : '';
+    return {
+      html: '<div class="cell-inner'+(showClear?' has-clear':'')+'">'+boxHtml+clearBtn+'</div>',
+      hasContent: hasContent,
+      showClear: showClear
+    };
+  }
+
   function buildWeeklyTable(){
     const table = document.getElementById('weekly-table');
     let html = '<thead><tr><th class="corner-th"></th>';
@@ -717,26 +1069,10 @@
         const cs = weeklyGrid[r][c];
         if(cs.hidden) continue;
         const rs = cs.rowSpan||1, colspan = cs.colSpan||1;
-        const hasContent = !!cs.content;
-        const isCustom = !!cs.isCustom;
-        const showCheckbox = !editMode && hasContent && !isCustom;
-        const statusClass = showCheckbox ? (cs.checked ? 'status-checked' : 'status-unchecked') : '';
-        const checkInner = showCheckbox
-          ? '<button class="cell-check'+(cs.checked?' checked':'')+'" data-r="'+r+'" data-c="'+c+'" title="標記完成">'
-            + '<svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-9" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-            + '</button>'
-          : '';
-        const boxHtml = hasContent
-          ? '<div class="cell-box '+statusClass+'"><span class="cell-content">'+escapeHtml(cs.content)+'</span>'+checkInner+'</div>'
-          : '';
-        const showClear = editMode && hasContent;
-        const clearBtn = showClear
-          ? '<button class="cell-clear" data-r="'+r+'" data-c="'+c+'">×</button>'
-          : '';
+        const rendered = renderCellMarkup(cs, r, c);
         html += '<td class="w-cell" data-r="'+r+'" data-c="'+c+'" rowspan="'+rs+'" colspan="'+colspan+'">'
-              + '<div class="cell-inner'+(showClear?' has-clear':'')+'">'
-              + boxHtml + clearBtn
-              + '</div></td>';
+              + rendered.html
+              + '</td>';
       }
       html += '</tr>';
     }
@@ -744,6 +1080,87 @@
     table.innerHTML = html;
     attachCellHandlers();
     updateToolbarState();
+    buildMobileAgenda();
+  }
+
+  // ---------------- Mobile single-day agenda ----------------
+  let mobileDayIndex = 0; // 0=週一 ... 6=週日
+
+  function findOriginAt(row, col){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell = weeklyGrid[r][c];
+        if(cell.hidden) continue;
+        const rs = cell.rowSpan||1, cs = cell.colSpan||1;
+        if(row>=r && row<r+rs && col>=c && col<c+cs){
+          return {r:r, c:c, cell:cell, rowSpan:rs, colSpan:cs};
+        }
+      }
+    }
+    return null;
+  }
+
+  function buildMobileAgenda(){
+    const label = document.getElementById('day-switcher-label');
+    const list = document.getElementById('agenda-list');
+    if(!label || !list) return;
+    label.textContent = DAYS[mobileDayIndex];
+
+    let html = '';
+    let r = 0;
+    while(r < ROWS){
+      const origin = findOriginAt(r, mobileDayIndex);
+      if(!origin){ r++; continue; }
+      if(origin.r === r){
+        const timeLabel = origin.rowSpan > 1
+          ? HOURS[origin.r].split('–')[0] + '–' + HOURS[origin.r + origin.rowSpan - 1].split('–')[1]
+          : HOURS[origin.r];
+        const rendered = renderCellMarkup(origin.cell, origin.r, origin.c);
+        html += '<div class="agenda-item'+(rendered.hasContent?'':' empty')+'">'
+              + '<div class="agenda-time">'+timeLabel+'</div>'
+              + '<div class="agenda-body">'+rendered.html+'</div>'
+              + '</div>';
+        r = origin.r + origin.rowSpan;
+      } else {
+        r++;
+      }
+    }
+    list.innerHTML = html;
+    attachAgendaHandlers();
+  }
+
+  function attachAgendaHandlers(){
+    const list = document.getElementById('agenda-list');
+    list.querySelectorAll('.cell-clear').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        const r = +btn.dataset.r, c = +btn.dataset.c;
+        weeklyGrid[r][c].content = '';
+        weeklyGrid[r][c].checked = false;
+        buildWeeklyTable();
+        saveWeekly();
+      });
+    });
+    list.querySelectorAll('.cell-check').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        const r = +btn.dataset.r, c = +btn.dataset.c;
+        weeklyGrid[r][c].checked = !weeklyGrid[r][c].checked;
+        buildWeeklyTable();
+        saveWeekly();
+      });
+    });
+  }
+
+  function setupMobileDaySwitcher(){
+    document.getElementById('btn-day-prev').addEventListener('click', function(){
+      mobileDayIndex = (mobileDayIndex - 1 + COLS) % COLS;
+      buildMobileAgenda();
+    });
+    document.getElementById('btn-day-next').addEventListener('click', function(){
+      mobileDayIndex = (mobileDayIndex + 1) % COLS;
+      buildMobileAgenda();
+    });
   }
 
   // Selection state
@@ -911,20 +1328,31 @@
   }
 
   // ---------------- Tabs ----------------
-  function setupTabs(){
+  function switchTab(target){
     const tabMandala = document.getElementById('tab-mandala');
     const tabWeekly = document.getElementById('tab-weekly');
+    const btabMandala = document.getElementById('btab-mandala');
+    const btabWeekly = document.getElementById('btab-weekly');
     const panelMandala = document.getElementById('panel-mandala');
     const panelWeekly = document.getElementById('panel-weekly');
-    tabMandala.addEventListener('click', function(){
-      tabMandala.classList.add('active'); tabWeekly.classList.remove('active');
-      panelMandala.classList.add('active'); panelWeekly.classList.remove('active');
-    });
-    tabWeekly.addEventListener('click', function(){
-      tabWeekly.classList.add('active'); tabMandala.classList.remove('active');
-      panelWeekly.classList.add('active'); panelMandala.classList.remove('active');
+    const isMandala = target === 'mandala';
+    tabMandala.classList.toggle('active', isMandala);
+    tabWeekly.classList.toggle('active', !isMandala);
+    btabMandala.classList.toggle('active', isMandala);
+    btabWeekly.classList.toggle('active', !isMandala);
+    panelMandala.classList.toggle('active', isMandala);
+    panelWeekly.classList.toggle('active', !isMandala);
+    if(!isMandala){
       buildGoalList(); // refresh labels from latest mandala text
-    });
+      buildMobileAgenda();
+    }
+  }
+
+  function setupTabs(){
+    document.getElementById('tab-mandala').addEventListener('click', function(){ switchTab('mandala'); });
+    document.getElementById('tab-weekly').addEventListener('click', function(){ switchTab('weekly'); });
+    document.getElementById('btab-mandala').addEventListener('click', function(){ switchTab('mandala'); });
+    document.getElementById('btab-weekly').addEventListener('click', function(){ switchTab('weekly'); });
   }
 
   function setupToolbar(){
@@ -969,6 +1397,90 @@
     updateEditUI();
   }
 
+  // ---------------- Sync code ----------------
+  function genRandomCode(){
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // 排除易混淆字元(0/o, 1/l/i)
+    function part(len){
+      let s = '';
+      for(let i=0;i<len;i++){ s += chars[Math.floor(Math.random()*chars.length)]; }
+      return s;
+    }
+    return part(4)+'-'+part(4);
+  }
+
+  function isValidSyncCode(code){
+    return /^[a-zA-Z0-9_-]{4,40}$/.test(code);
+  }
+
+  function getSyncCode(){
+    let code = localStorage.getItem('sync-code');
+    if(!code){
+      code = genRandomCode();
+      localStorage.setItem('sync-code', code);
+    }
+    return code;
+  }
+
+  function setupSyncCode(){
+    getSyncCode(); // 確保一開啟網站就自動產生好代碼
+    const fab = document.getElementById('btn-sync-code');
+    const overlay = document.getElementById('sync-modal');
+    const input = document.getElementById('sync-code-input');
+    const copyBtn = document.getElementById('btn-copy-sync');
+    const saveBtn = document.getElementById('btn-save-sync');
+    const regenBtn = document.getElementById('btn-regen-sync');
+    const closeBtn = document.getElementById('btn-close-sync');
+    const msg = document.getElementById('sync-copy-msg');
+
+    function showMsg(text){
+      msg.textContent = text;
+      msg.hidden = false;
+    }
+
+    function openModal(){
+      input.value = getSyncCode();
+      msg.hidden = true;
+      overlay.hidden = false;
+    }
+    function closeModal(){ overlay.hidden = true; }
+
+    fab.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) closeModal(); });
+
+    copyBtn.addEventListener('click', async function(){
+      try{
+        await navigator.clipboard.writeText(input.value);
+        showMsg('已複製到剪貼簿!');
+      }catch(e){
+        input.select();
+        try{ document.execCommand('copy'); showMsg('已複製到剪貼簿!'); }
+        catch(e2){ showMsg('複製失敗,請手動選取後複製。'); }
+      }
+    });
+
+    saveBtn.addEventListener('click', async function(){
+      const val = input.value.trim();
+      if(!isValidSyncCode(val)){
+        alert('同步碼只能使用英文字母、數字、連字號(-)或底線(_),長度需為 4~40 字元。');
+        return;
+      }
+      localStorage.setItem('sync-code', val);
+      showMsg('正在從雲端讀取這組同步碼的資料...');
+      const found = await cloudPull(val);
+      showMsg(found ? '已讀取雲端資料並完成同步!' : '已儲存自訂同步碼!(雲端目前還沒有這組碼的資料,會以這台裝置的內容為主)');
+      if(!found) scheduleCloudPush();
+    });
+
+    regenBtn.addEventListener('click', function(){
+      const code = genRandomCode();
+      localStorage.setItem('sync-code', code);
+      input.value = code;
+      showMsg('已產生新的隨機同步碼!');
+      scheduleCloudPush(); // 把目前這台裝置的資料，當作這組新碼的初始雲端內容
+    });
+  }
+
   async function init(){
     await loadAll();
     buildMandala();
@@ -980,6 +1492,16 @@
     setupTabs();
     setupToolbar();
     setupTopbar();
+    setupSyncCode();
+    setupMobileDaySwitcher();
+
+    // 開啟網站時，順便問雲端「這組同步碼」有沒有更新的資料。
+    // 如果有，就蓋掉剛剛從 localStorage 讀到的內容並重新渲染。
+    // 如果雲端還沒有資料（例如第一次使用），就把目前這台裝置的內容推上雲端。
+    if(db){
+      const found = await cloudPull(getSyncCode());
+      if(!found) scheduleCloudPush();
+    }
   }
 
   if(document.readyState === 'loading'){
