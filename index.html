@@ -544,6 +544,29 @@
   .cell-check.checked svg{opacity:1;}
   .cell-check svg path{stroke:#fff;}
 
+  /* ---------- Habit cell: 可以放多個項目，垂直往下疊 ---------- */
+  .habit-cell-inner{
+    flex-direction:column;
+    align-items:stretch;
+    gap:3px;
+    padding:3px 4px;
+  }
+  .cell-box.habit-item{
+    position:relative;
+    flex:none;
+    width:100%;
+    box-sizing:border-box;
+  }
+  .cell-box.habit-item.has-clear{padding-right:18px;}
+  .cell-box.habit-item .cell-clear{
+    position:absolute;
+    top:50%;
+    right:0;
+    transform:translateY(-50%);
+    padding:1px 4px;
+    font-size:0.62rem;
+  }
+
   /* ---------- Habit tracking row ---------- */
   tr.habit-row th.habit-th{
     background:#DCEBCA;
@@ -555,7 +578,7 @@
     padding:4px;
     white-space:nowrap;
   }
-  td.habit-cell{background:#DCEBCA;}
+  td.habit-cell{background:#DCEBCA;vertical-align:top;}
   td.habit-cell.selected{background:#DCEBCA;}
   .agenda-item.habit-agenda-item{
     border-bottom:2px solid var(--success);
@@ -1354,10 +1377,25 @@
   }
 
   function initHabitRow(force){
-    if(habitRow && !force) return;
+    if(habitRow && !force){ normalizeHabitRow(); return; }
     habitRow = [];
     for(let c=0;c<COLS;c++){
-      habitRow.push({content:'', checked:false, isCustom:false});
+      habitRow.push({items: []});
+    }
+  }
+
+  // 習慣追蹤列的資料格式從「一格一項 {content,checked,isCustom}」改成「一格多項 {items:[...]}」。
+  // 這裡把舊格式的資料自動轉成新格式，讓你之前已經存過的習慣追蹤內容(localStorage 跟雲端)不會不見。
+  function normalizeHabitRow(){
+    if(!Array.isArray(habitRow)) return;
+    for(let c=0;c<habitRow.length;c++){
+      const cell = habitRow[c];
+      if(cell && !Array.isArray(cell.items)){
+        const items = cell.content ? [{content:cell.content, checked:!!cell.checked, isCustom:!!cell.isCustom}] : [];
+        habitRow[c] = {items: items};
+      } else if(!cell){
+        habitRow[c] = {items: []};
+      }
     }
   }
 
@@ -1385,11 +1423,37 @@
     };
   }
 
+  // 習慣追蹤格專用：跟一般時段格不同，一格可以放「一個以上」的項目，垂直往下疊。
+  // 每個項目各自有自己的打勾/清除按鈕，用 data-i 標示是這一格裡的第幾個項目。
+  function renderHabitCellMarkup(cell, c){
+    const items = (cell && cell.items) || [];
+    const itemsHtml = items.map(function(it, i){
+      const isCustom = !!it.isCustom;
+      const showCheckbox = !editMode && !isCustom;
+      const statusClass = showCheckbox ? (it.checked ? 'status-checked' : 'status-unchecked') : '';
+      const checkInner = showCheckbox
+        ? '<button class="cell-check'+(it.checked?' checked':'')+'" data-r="-1" data-c="'+c+'" data-i="'+i+'" title="標記完成">'
+          + '<svg viewBox="0 0 20 20"><path d="M4 10l4 4 8-9" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</button>'
+        : '';
+      const showClear = editMode;
+      const clearBtn = showClear
+        ? '<button class="cell-clear" data-r="-1" data-c="'+c+'" data-i="'+i+'">×</button>'
+        : '';
+      return '<div class="cell-box habit-item'+(statusClass?' '+statusClass:'')+(showClear?' has-clear':'')+'">'
+           +   '<span class="cell-content">'+escapeHtml(it.content)+'</span>'+checkInner+clearBtn
+           + '</div>';
+    }).join('');
+    return {
+      html: '<div class="cell-inner habit-cell-inner">'+itemsHtml+'</div>',
+      hasContent: items.length > 0
+    };
+  }
+
   function habitRowHtml(){
     let html = '<tr class="habit-row"><th class="habit-th">習慣追蹤</th>';
     for(let c=0;c<COLS;c++){
-      const cs = habitRow[c];
-      const rendered = renderCellMarkup(cs, -1, c);
+      const rendered = renderHabitCellMarkup(habitRow[c], c);
       html += '<td class="w-cell habit-cell" data-r="-1" data-c="'+c+'">'+rendered.html+'</td>';
     }
     html += '</tr>';
@@ -1447,8 +1511,7 @@
     label.textContent = DAYS[mobileDayIndex] + ' ' + formatDateShort(getWeekDates()[mobileDayIndex]);
 
     // 習慣追蹤永遠排在該天 agenda 最上方(每天都要看到，不限特定時段)
-    const hcs = habitRow[mobileDayIndex];
-    const hRendered = renderCellMarkup(hcs, -1, mobileDayIndex);
+    const hRendered = renderHabitCellMarkup(habitRow[mobileDayIndex], mobileDayIndex);
     let html = '<div class="agenda-item habit-agenda-item'+(hRendered.hasContent?'':' empty')+'" data-r="-1" data-c="'+mobileDayIndex+'">'
               + '<div class="agenda-time">習慣追蹤</div>'
               + '<div class="agenda-body">'+hRendered.html+'</div>'
@@ -1507,8 +1570,8 @@
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
         if(r === -1){
-          habitRow[c].content = '';
-          habitRow[c].checked = false;
+          const i = +btn.dataset.i;
+          habitRow[c].items.splice(i, 1);
           buildWeeklyTable();
           saveHabitRow();
         } else {
@@ -1524,7 +1587,8 @@
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
         if(r === -1){
-          habitRow[c].checked = !habitRow[c].checked;
+          const i = +btn.dataset.i;
+          habitRow[c].items[i].checked = !habitRow[c].items[i].checked;
           buildWeeklyTable();
           saveHabitRow();
         } else {
@@ -1552,9 +1616,7 @@
         const source = e.dataTransfer.getData('application/x-chip-source');
         const r = +item.dataset.r, c = +item.dataset.c;
         if(r === -1){
-          habitRow[c].content = label;
-          habitRow[c].checked = false;
-          habitRow[c].isCustom = (source === 'custom');
+          habitRow[c].items.push({content: label, checked:false, isCustom:(source === 'custom')});
           buildWeeklyTable();
           saveHabitRow();
         } else {
@@ -1690,9 +1752,15 @@
     html += '<tr><th class="history-habit-th">習慣追蹤</th>';
     const hRow = snap.habitRow || [];
     for(let c=0;c<COLS;c++){
-      const cs = hRow[c] || {content:''};
-      const text = cs.content ? (escapeHtml(cs.content) + (cs.checked?' ✓':'')) : '—';
-      html += '<td class="history-habit-cell'+(cs.content?'':' history-empty-cell')+'">'+text+'</td>';
+      const cell = hRow[c];
+      // 相容舊格式的歷史快照(一格一項 {content,checked}) 跟新格式(一格多項 {items:[...]})
+      const items = (cell && Array.isArray(cell.items))
+        ? cell.items
+        : (cell && cell.content ? [{content:cell.content, checked:cell.checked}] : []);
+      const text = items.length
+        ? items.map(function(it){ return escapeHtml(it.content) + (it.checked?' ✓':''); }).join('<br>')
+        : '—';
+      html += '<td class="history-habit-cell'+(items.length?'':' history-empty-cell')+'">'+text+'</td>';
     }
     html += '</tr>';
 
@@ -1795,9 +1863,7 @@
       state.lastTarget.classList.remove('drag-over');
       const r = +state.lastTarget.dataset.r, c = +state.lastTarget.dataset.c;
       if(r === -1){
-        habitRow[c].content = state.label;
-        habitRow[c].checked = false;
-        habitRow[c].isCustom = (state.source === 'custom');
+        habitRow[c].items.push({content: state.label, checked:false, isCustom:(state.source === 'custom')});
         buildWeeklyTable();
         saveHabitRow();
       } else {
@@ -1844,9 +1910,7 @@
         const source = e.dataTransfer.getData('application/x-chip-source');
         const r = +td.dataset.r, c = +td.dataset.c;
         if(r === -1){
-          habitRow[c].content = label;
-          habitRow[c].checked = false;
-          habitRow[c].isCustom = (source === 'custom');
+          habitRow[c].items.push({content: label, checked:false, isCustom:(source === 'custom')});
           buildWeeklyTable();
           saveHabitRow();
         } else {
@@ -1863,8 +1927,8 @@
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
         if(r === -1){
-          habitRow[c].content = '';
-          habitRow[c].checked = false;
+          const i = +btn.dataset.i;
+          habitRow[c].items.splice(i, 1);
           buildWeeklyTable();
           saveHabitRow();
         } else {
@@ -1880,7 +1944,8 @@
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
         if(r === -1){
-          habitRow[c].checked = !habitRow[c].checked;
+          const i = +btn.dataset.i;
+          habitRow[c].items[i].checked = !habitRow[c].items[i].checked;
           buildWeeklyTable();
           saveHabitRow();
         } else {
