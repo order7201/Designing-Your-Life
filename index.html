@@ -456,6 +456,13 @@
     padding:8px 4px;
     font-weight:500;
   }
+  .th-date{
+    display:block;
+    font-size:0.64rem;
+    font-weight:400;
+    color:var(--line);
+    margin-top:2px;
+  }
   th.corner-th{background:var(--ink);}
   th.hour-th{
     background:var(--paper-2);
@@ -537,6 +544,157 @@
   .cell-check.checked svg{opacity:1;}
   .cell-check svg path{stroke:#fff;}
 
+  /* ---------- Habit tracking row ---------- */
+  tr.habit-row th.habit-th{
+    background:#DCEBCA;
+    color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem;
+    font-weight:600;
+    width:88px;
+    padding:4px;
+    white-space:nowrap;
+  }
+  td.habit-cell{background:#DCEBCA;}
+  td.habit-cell.selected{background:#DCEBCA;}
+  .agenda-item.habit-agenda-item{
+    border-bottom:2px solid var(--success);
+    background:#DCEBCA;
+  }
+  .agenda-item.habit-agenda-item .agenda-time{color:var(--success);font-weight:600;}
+
+  /* ---------- Weekly reflection ---------- */
+  .weekly-reflection{margin-top:20px;}
+  .weekly-reflection:empty{margin-top:0;}
+  .reflection-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    padding-top:16px;
+    border-top:2px solid var(--ink);
+    margin-bottom:12px;
+  }
+  .reflection-title{
+    font-family:'Fraunces',serif;
+    font-size:1.15rem;
+    margin:0;
+  }
+  .btn-save-week{color:var(--success);flex-shrink:0;}
+  .reflection-q{margin-bottom:14px;}
+  .reflection-label{
+    display:block;
+    font-size:0.86rem;
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .reflection-input{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:0.86rem;
+    line-height:1.5;
+    padding:9px 10px;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    resize:vertical;
+  }
+  .reflection-input:focus{border-color:var(--amber);}
+
+  /* ---------- Toast notification ---------- */
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:28px;
+    transform:translateX(-50%) translateY(12px);
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.82rem;
+    padding:11px 20px;
+    border-radius:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.22);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s ease, transform 0.25s ease;
+    z-index:999;
+    max-width:86vw;
+    text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ---------- History tab ---------- */
+  .history-layout{max-width:820px;margin:0 auto;}
+  .history-empty{
+    color:var(--slate);
+    font-size:0.9rem;
+    padding:30px 0;
+    text-align:center;
+  }
+  .history-picker{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+  }
+  .history-picker label{font-size:0.86rem;font-weight:600;}
+  .history-picker select{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.84rem;
+    padding:7px 10px;
+    border:1.5px solid var(--line);
+    border-radius:6px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .history-saved-at{font-size:0.76rem;color:var(--slate);}
+  .history-section-title{
+    font-family:'Fraunces',serif;
+    font-size:1.05rem;
+    margin:22px 0 10px;
+    padding-top:14px;
+    border-top:1.5px solid var(--line);
+  }
+  table.history-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+  table.history-table th, table.history-table td{
+    border:1px solid var(--line);
+    padding:5px 6px;
+    text-align:center;
+    vertical-align:top;
+  }
+  table.history-table thead th{background:var(--ink);color:var(--paper);font-weight:500;}
+  table.history-table th.history-hour-th{
+    background:var(--paper-2);
+    color:var(--slate);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem;
+    white-space:nowrap;
+  }
+  table.history-table th.history-habit-th{
+    background:#DCEBCA;
+    color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  table.history-table td.history-habit-cell{background:#DCEBCA;}
+  table.history-table td.history-empty-cell{color:var(--line);}
+  .history-reflection-q{margin-bottom:12px;}
+  .history-reflection-q .reflection-label{margin-bottom:4px;}
+  .history-reflection-answer{
+    font-size:0.86rem;
+    line-height:1.6;
+    white-space:pre-wrap;
+    background:var(--paper-2);
+    border-radius:8px;
+    padding:9px 10px;
+    min-height:1.6em;
+  }
+
   @media (max-width: 720px){
     body{overflow-x:hidden;}
     .weekly-layout{flex-direction:column;}
@@ -570,6 +728,7 @@
     }
     .bottom-tabs button.active{color:var(--ink);font-weight:600;}
     .btab-icon{font-size:1.25rem;line-height:1;}
+    .toast{bottom:calc(70px + env(safe-area-inset-bottom));}
     .app-shell{padding-bottom:74px;}
 
     .desktop-only{display:none;}
@@ -585,8 +744,9 @@
     .day-label{
       font-family:'Fraunces',serif;
       font-size:1.15rem;
-      min-width:64px;
+      min-width:110px;
       text-align:center;
+      white-space:nowrap;
     }
     .day-arrow{
       background:var(--paper-2);
@@ -689,6 +849,7 @@
   <nav class="tabs">
     <button id="tab-mandala" class="active">曼陀羅九宮格</button>
     <button id="tab-weekly">週計畫</button>
+    <button id="tab-history">歷史週計畫檢視</button>
   </nav>
 
   <nav class="bottom-tabs">
@@ -700,7 +861,13 @@
       <span class="btab-icon">▤</span>
       <span class="btab-label">週計畫</span>
     </button>
+    <button id="btab-history">
+      <span class="btab-icon">🕘</span>
+      <span class="btab-label">歷史記錄</span>
+    </button>
   </nav>
+
+  <div id="toast" class="toast"></div>
 
   <section id="panel-mandala" class="panel active">
     <div class="mandala-wrap">
@@ -737,6 +904,7 @@
         <div id="weekly-table-wrap" class="desktop-only">
           <table id="weekly-table"></table>
         </div>
+        <div id="weekly-reflection-desktop" class="weekly-reflection desktop-only"></div>
         <div id="weekly-mobile-agenda" class="mobile-only">
           <div class="day-switcher">
             <button id="btn-day-prev" class="day-arrow" type="button" aria-label="前一天">‹</button>
@@ -744,8 +912,20 @@
             <button id="btn-day-next" class="day-arrow" type="button" aria-label="後一天">›</button>
           </div>
           <div id="agenda-list" class="agenda-list"></div>
+          <div id="weekly-reflection-mobile" class="weekly-reflection"></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="panel-history" class="panel">
+    <div class="history-layout">
+      <div class="history-picker">
+        <label for="history-select">選擇要檢視的週：</label>
+        <select id="history-select"></select>
+        <span id="history-saved-at" class="history-saved-at"></span>
+      </div>
+      <div id="history-content"></div>
     </div>
   </section>
 
@@ -810,9 +990,48 @@
   let weeklyGrid = null; // [row][col] = {content, rowSpan, colSpan, hidden, checked}
   let customItems = []; // array of strings, user-added "其他" items
   let editMode = false; // false = 鎖定/檢視模式(顯示打勾), true = 編輯模式(可拖曳修改)
+  let habitRow = null; // [col] = {content, checked, isCustom}，習慣追蹤列(不屬於任何時段)，每天一格
+  let reflectionAnswers = {}; // "問題id" -> 文字回答
+  let weeklyHistory = {}; // "YYYY-MM-DD"(該週週一的日期) -> {weekKey, savedAt, weeklyGrid, habitRow, reflectionAnswers}
+
+  // 每週復盤題目
+  const REFLECTION_QUESTIONS = [
+    {id:'r1', text:'這週我在哪些地方花太多時間？'},
+    {id:'r2', text:'下週我需要花更多時間在哪些地方？'},
+    {id:'r3', text:'各個領域裡，我還有哪些未解決的問題？'},
+    {id:'r4', text:'我的各個熱點在下週出現什麼樣的新機會？'},
+    {id:'r5', text:'我下週的目標會遇到什麼阻礙？'},
+    {id:'r6', text:'我是否需要增加或刪除哪個承諾？'},
+    {id:'r7', text:'這週我哪些地方做得非常出色？'}
+  ];
 
   function pad(n){ return n<10 ? '0'+n : ''+n; }
   function key(x,y){ return x+'-'+y; }
+
+  // ---------------- This week's dates (auto, no manual input) ----------------
+  // 用瀏覽器當下的系統日期，往回算出「本週的週一」，週一~週日就自動往後推算。
+  // 過了週一 00:00，這裡重新計算就會自動變成新的一週，不需要使用者手動操作。
+  function getMondayOfThisWeek(){
+    const now = new Date();
+    const dow = now.getDay(); // 0=週日,1=週一,...,6=週六
+    const diffToMonday = (dow === 0) ? -6 : (1 - dow);
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
+  }
+  function getWeekDates(){
+    const monday = getMondayOfThisWeek();
+    const dates = [];
+    for(let i=0;i<7;i++){
+      dates.push(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+    }
+    return dates;
+  }
+  function formatDateShort(d){
+    return (d.getMonth()+1)+'/'+d.getDate();
+  }
+  function isSundayToday(){
+    return new Date().getDay() === 0;
+  }
+
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, function(s){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s];
@@ -841,6 +1060,18 @@
       const v = localStorage.getItem('custom-items');
       if(v) customItems = JSON.parse(v);
     }catch(e){ /* no saved data yet */ }
+    try{
+      const v = localStorage.getItem('habit-row');
+      if(v) habitRow = JSON.parse(v);
+    }catch(e){ /* no saved data yet */ }
+    try{
+      const v = localStorage.getItem('weekly-reflection');
+      if(v) reflectionAnswers = JSON.parse(v);
+    }catch(e){ /* no saved data yet */ }
+    try{
+      const v = localStorage.getItem('weekly-history');
+      if(v) weeklyHistory = JSON.parse(v);
+    }catch(e){ /* no saved data yet */ }
   }
 
   // ---- 雲端同步（Firestore）----
@@ -861,10 +1092,34 @@
         mandala: mandalaData,
         weeklyJson: JSON.stringify(weeklyGrid), // Firestore 不支援巢狀陣列，週計畫是二維陣列，先轉成字串再存
         customItems: customItems,
+        habitJson: JSON.stringify(habitRow), // 習慣追蹤列跟 weeklyGrid 同樣是「陣列包物件」的表格結構，統一也轉字串存，避免格式不一致
+        reflection: reflectionAnswers, // 單純的 {題目id: 文字} 平面物件，Firestore 原生支援，不需要轉字串
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }catch(e){
       console.error('雲端同步失敗(寫入)', e);
+    }
+  }
+
+  // 歷史記錄刻意跟 cloudPush() 分開、獨立一個函式：
+  // cloudPush() 在每次打字/拖曳都會被觸發(debounce 800ms)，如果連歷史記錄也塞進同一包，
+  // 等於每次自動存檔都要整包歷史一起重傳，越存越多年之後會越來越浪費流量。
+  // 這裡只有按下「儲存本週記錄」時才會呼叫，而且用 merge:true，只更新 history 這個欄位。
+  async function cloudPushHistory(){
+    if(!db) return;
+    const code = getSyncCode();
+    try{
+      const historyForCloud = {};
+      Object.keys(weeklyHistory).forEach(function(wk){
+        // 每筆快照裡的 weeklyGrid 是二維陣列，Firestore 不支援，所以整包快照先轉成字串再存
+        historyForCloud[wk] = JSON.stringify(weeklyHistory[wk]);
+      });
+      await db.collection('synced-data').doc(code).set({
+        history: historyForCloud,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge:true});
+    }catch(e){
+      console.error('雲端同步失敗(寫入歷史記錄)', e);
     }
   }
 
@@ -881,14 +1136,30 @@
         try{ weeklyGrid = JSON.parse(data.weeklyJson); }catch(e){ /* 忽略壞資料 */ }
       }
       if(data.customItems) customItems = data.customItems;
+      if(data.habitJson){
+        try{ habitRow = JSON.parse(data.habitJson); }catch(e){ /* 忽略壞資料 */ }
+      }
+      if(data.reflection) reflectionAnswers = data.reflection;
+      if(data.history){
+        const parsedHistory = {};
+        Object.keys(data.history).forEach(function(wk){
+          try{ parsedHistory[wk] = JSON.parse(data.history[wk]); }catch(e){ /* 忽略壞資料，跳過這一筆 */ }
+        });
+        weeklyHistory = parsedHistory;
+        try{ localStorage.setItem('weekly-history', JSON.stringify(weeklyHistory)); }catch(e){ /* 儲存失敗就算了，記憶體內還是最新的 */ }
+      }
       await saveMandala(true);
       await saveWeekly(true);
       await saveCustomItems(true);
+      await saveHabitRow(true);
+      await saveReflection(true);
       buildMandala();
       initWeeklyGrid();
+      initHabitRow();
       buildWeeklyTable();
       buildGoalList();
       buildCustomList();
+      buildHistorySelect();
       return true;
     }catch(e){
       console.error('雲端同步失敗(讀取)', e);
@@ -914,6 +1185,23 @@
   async function saveCustomItems(skipCloud){
     try{ localStorage.setItem('custom-items', JSON.stringify(customItems)); }
     catch(e){ console.error('儲存其他項目失敗', e); }
+    if(!skipCloud) scheduleCloudPush();
+  }
+  // 習慣追蹤列跟 weeklyGrid 一樣是「拖曳/打勾/清除」這種一次性動作觸發存檔，不需要 debounce
+  async function saveHabitRow(skipCloud){
+    try{ localStorage.setItem('habit-row', JSON.stringify(habitRow)); }
+    catch(e){ console.error('儲存習慣追蹤失敗', e); }
+    if(!skipCloud) scheduleCloudPush();
+  }
+  // 每週復盤是文字輸入區，打字過程會持續觸發 input，跟九宮格文字一樣需要 debounce 再存檔
+  let reflectionSaveTimer = null;
+  function scheduleSaveReflection(){
+    clearTimeout(reflectionSaveTimer);
+    reflectionSaveTimer = setTimeout(saveReflection, 500);
+  }
+  async function saveReflection(skipCloud){
+    try{ localStorage.setItem('weekly-reflection', JSON.stringify(reflectionAnswers)); }
+    catch(e){ console.error('儲存每週復盤失敗', e); }
     if(!skipCloud) scheduleCloudPush();
   }
 
@@ -1065,6 +1353,14 @@
     }
   }
 
+  function initHabitRow(force){
+    if(habitRow && !force) return;
+    habitRow = [];
+    for(let c=0;c<COLS;c++){
+      habitRow.push({content:'', checked:false, isCustom:false});
+    }
+  }
+
   function renderCellMarkup(cs, r, c){
     const hasContent = !!cs.content;
     const isCustom = !!cs.isCustom;
@@ -1089,11 +1385,24 @@
     };
   }
 
+  function habitRowHtml(){
+    let html = '<tr class="habit-row"><th class="habit-th">習慣追蹤</th>';
+    for(let c=0;c<COLS;c++){
+      const cs = habitRow[c];
+      const rendered = renderCellMarkup(cs, -1, c);
+      html += '<td class="w-cell habit-cell" data-r="-1" data-c="'+c+'">'+rendered.html+'</td>';
+    }
+    html += '</tr>';
+    return html;
+  }
+
   function buildWeeklyTable(){
     const table = document.getElementById('weekly-table');
+    const weekDates = getWeekDates();
     let html = '<thead><tr><th class="corner-th"></th>';
-    DAYS.forEach(function(d){ html += '<th>'+d+'</th>'; });
+    DAYS.forEach(function(d, i){ html += '<th>'+d+'<span class="th-date">'+formatDateShort(weekDates[i])+'</span></th>'; });
     html += '</tr></thead><tbody>';
+    html += habitRowHtml();
     for(let r=0;r<ROWS;r++){
       html += '<tr><th class="hour-th">'+HOURS[r]+'</th>';
       for(let c=0;c<COLS;c++){
@@ -1135,9 +1444,15 @@
     const label = document.getElementById('day-switcher-label');
     const list = document.getElementById('agenda-list');
     if(!label || !list) return;
-    label.textContent = DAYS[mobileDayIndex];
+    label.textContent = DAYS[mobileDayIndex] + ' ' + formatDateShort(getWeekDates()[mobileDayIndex]);
 
-    let html = '';
+    // 習慣追蹤永遠排在該天 agenda 最上方(每天都要看到，不限特定時段)
+    const hcs = habitRow[mobileDayIndex];
+    const hRendered = renderCellMarkup(hcs, -1, mobileDayIndex);
+    let html = '<div class="agenda-item habit-agenda-item'+(hRendered.hasContent?'':' empty')+'" data-r="-1" data-c="'+mobileDayIndex+'">'
+              + '<div class="agenda-time">習慣追蹤</div>'
+              + '<div class="agenda-body">'+hRendered.html+'</div>'
+              + '</div>';
     let r = 0;
     while(r < ROWS){
       const origin = findOriginAt(r, mobileDayIndex);
@@ -1159,6 +1474,7 @@
     list.innerHTML = html;
     attachAgendaHandlers();
     adjustAgendaFullBleed();
+    buildReflection(); // 每週復盤:只有「目前檢視的天」是週日時才會顯示內容(手機版跟著切天按鈕連動)
   }
 
   // 用 JS 實際量測 #agenda-list 距離螢幕左右邊緣的精確像素，直接設成負的 margin，
@@ -1190,19 +1506,32 @@
       btn.addEventListener('click', function(e){
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
-        weeklyGrid[r][c].content = '';
-        weeklyGrid[r][c].checked = false;
-        buildWeeklyTable();
-        saveWeekly();
+        if(r === -1){
+          habitRow[c].content = '';
+          habitRow[c].checked = false;
+          buildWeeklyTable();
+          saveHabitRow();
+        } else {
+          weeklyGrid[r][c].content = '';
+          weeklyGrid[r][c].checked = false;
+          buildWeeklyTable();
+          saveWeekly();
+        }
       });
     });
     list.querySelectorAll('.cell-check').forEach(function(btn){
       btn.addEventListener('click', function(e){
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
-        weeklyGrid[r][c].checked = !weeklyGrid[r][c].checked;
-        buildWeeklyTable();
-        saveWeekly();
+        if(r === -1){
+          habitRow[c].checked = !habitRow[c].checked;
+          buildWeeklyTable();
+          saveHabitRow();
+        } else {
+          weeklyGrid[r][c].checked = !weeklyGrid[r][c].checked;
+          buildWeeklyTable();
+          saveWeekly();
+        }
       });
     });
     // 有些手機瀏覽器(例如 iOS Safari 長按)支援原生的 HTML5 拖曳，
@@ -1222,12 +1551,182 @@
         if(!label) return;
         const source = e.dataTransfer.getData('application/x-chip-source');
         const r = +item.dataset.r, c = +item.dataset.c;
-        weeklyGrid[r][c].content = label;
-        weeklyGrid[r][c].checked = false;
-        weeklyGrid[r][c].isCustom = (source === 'custom');
-        buildWeeklyTable();
-        saveWeekly();
+        if(r === -1){
+          habitRow[c].content = label;
+          habitRow[c].checked = false;
+          habitRow[c].isCustom = (source === 'custom');
+          buildWeeklyTable();
+          saveHabitRow();
+        } else {
+          weeklyGrid[r][c].content = label;
+          weeklyGrid[r][c].checked = false;
+          weeklyGrid[r][c].isCustom = (source === 'custom');
+          buildWeeklyTable();
+          saveWeekly();
+        }
       });
+    });
+  }
+
+  // ---------------- Weekly reflection ----------------
+  // 暫時無條件顯示(桌面版、手機版都一樣)。
+  // 之後要恢復「只有週日才顯示」的規則時，把下面這行改回:
+  //   const showReflection = isSundayToday();
+  function buildReflection(){
+    const showReflection = true;
+    const qHtml = REFLECTION_QUESTIONS.map(function(q){
+      const val = reflectionAnswers[q.id] || '';
+      return '<div class="reflection-q">'
+           +   '<label class="reflection-label">'+escapeHtml(q.text)+'</label>'
+           +   '<textarea class="reflection-input" data-qid="'+q.id+'" rows="3">'+escapeHtml(val)+'</textarea>'
+           + '</div>';
+    }).join('');
+    const fullHtml = '<div class="reflection-header">'
+                    +   '<h3 class="reflection-title">每週復盤</h3>'
+                    +   '<button type="button" class="icon-btn btn-save-week" title="儲存本週週計畫與復盤紀錄">'
+                    +     '<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h10l3 3v9H4V4z"/><path d="M7 4v5h6V4"/><path d="M6 13h8v3H6z"/></svg>'
+                    +     ' 儲存本週記錄'
+                    +   '</button>'
+                    + '</div>'
+                    + qHtml;
+
+    const desktopEl = document.getElementById('weekly-reflection-desktop');
+    if(desktopEl) desktopEl.innerHTML = showReflection ? fullHtml : '';
+
+    const mobileEl = document.getElementById('weekly-reflection-mobile');
+    if(mobileEl) mobileEl.innerHTML = showReflection ? fullHtml : '';
+
+    attachReflectionHandlers();
+  }
+
+  function attachReflectionHandlers(){
+    document.querySelectorAll('.reflection-input').forEach(function(ta){
+      ta.addEventListener('input', function(){
+        reflectionAnswers[ta.dataset.qid] = ta.value;
+        scheduleSaveReflection();
+      });
+    });
+    document.querySelectorAll('.btn-save-week').forEach(function(btn){
+      btn.addEventListener('click', saveWeeklyHistorySnapshot);
+    });
+  }
+
+  // ---------------- Toast notification ----------------
+  let toastTimer = null;
+  function showToast(text){
+    const el = document.getElementById('toast');
+    if(!el) return;
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  }
+
+  // ---------------- Weekly history snapshot (每週最多一筆，同一週再存就覆蓋舊的) ----------------
+  function weekKeyOfThisWeek(){
+    const monday = getMondayOfThisWeek();
+    return monday.getFullYear() + '-' + pad(monday.getMonth()+1) + '-' + pad(monday.getDate());
+  }
+
+  function saveWeeklyHistorySnapshot(){
+    const wk = weekKeyOfThisWeek();
+    weeklyHistory[wk] = {
+      weekKey: wk,
+      savedAt: Date.now(),
+      weeklyGrid: weeklyGrid,
+      habitRow: habitRow,
+      reflectionAnswers: reflectionAnswers
+    };
+    try{ localStorage.setItem('weekly-history', JSON.stringify(weeklyHistory)); }
+    catch(e){ console.error('儲存歷史記錄失敗', e); }
+    cloudPushHistory();
+    buildHistorySelect();
+    showToast('已儲存本週記錄(' + wk + ' 那一週)');
+  }
+
+  // ---------------- History tab (唯讀檢視，不可編輯) ----------------
+  function formatWeekRangeLabel(wk){
+    const parts = wk.split('-').map(Number);
+    const monday = new Date(parts[0], parts[1]-1, parts[2]);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate()+6);
+    return wk + '（' + formatDateShort(monday) + ' ～ ' + formatDateShort(sunday) + '）';
+  }
+
+  function buildHistorySelect(){
+    const sel = document.getElementById('history-select');
+    const contentEl = document.getElementById('history-content');
+    const savedAtEl = document.getElementById('history-saved-at');
+    if(!sel) return;
+    const keys = Object.keys(weeklyHistory).sort().reverse(); // 新到舊
+    if(keys.length === 0){
+      sel.innerHTML = '';
+      sel.disabled = true;
+      savedAtEl.textContent = '';
+      contentEl.innerHTML = '<div class="history-empty">目前還沒有任何儲存的歷史記錄。到「週計畫」分頁的每週復盤區塊按下「儲存本週記錄」，存過的週就會出現在這裡。</div>';
+      return;
+    }
+    sel.disabled = false;
+    const prevValue = sel.value;
+    sel.innerHTML = keys.map(function(wk){
+      return '<option value="'+wk+'">'+formatWeekRangeLabel(wk)+'</option>';
+    }).join('');
+    const toSelect = keys.indexOf(prevValue) !== -1 ? prevValue : keys[0];
+    sel.value = toSelect;
+    renderHistorySnapshot(toSelect);
+  }
+
+  function renderHistorySnapshot(wk){
+    const contentEl = document.getElementById('history-content');
+    const savedAtEl = document.getElementById('history-saved-at');
+    const snap = weeklyHistory[wk];
+    if(!snap || !contentEl) return;
+    if(savedAtEl) savedAtEl.textContent = '儲存時間：' + new Date(snap.savedAt).toLocaleString('zh-TW');
+
+    let html = '<div class="history-section-title">週計畫</div>';
+    html += '<table class="history-table"><thead><tr><th></th>';
+    DAYS.forEach(function(d){ html += '<th>'+d+'</th>'; });
+    html += '</tr></thead><tbody>';
+
+    html += '<tr><th class="history-habit-th">習慣追蹤</th>';
+    const hRow = snap.habitRow || [];
+    for(let c=0;c<COLS;c++){
+      const cs = hRow[c] || {content:''};
+      const text = cs.content ? (escapeHtml(cs.content) + (cs.checked?' ✓':'')) : '—';
+      html += '<td class="history-habit-cell'+(cs.content?'':' history-empty-cell')+'">'+text+'</td>';
+    }
+    html += '</tr>';
+
+    const grid = snap.weeklyGrid || [];
+    for(let r=0;r<ROWS;r++){
+      html += '<tr><th class="history-hour-th">'+HOURS[r]+'</th>';
+      for(let c=0;c<COLS;c++){
+        const cs = grid[r] && grid[r][c];
+        if(!cs || cs.hidden) continue;
+        const rs = cs.rowSpan||1, colspan = cs.colSpan||1;
+        const attrs = (rs>1?' rowspan="'+rs+'"':'') + (colspan>1?' colspan="'+colspan+'"':'');
+        const text = cs.content ? (escapeHtml(cs.content) + (cs.checked?' ✓':'')) : '—';
+        html += '<td'+attrs+(cs.content?'':' class="history-empty-cell"')+'>'+text+'</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+
+    html += '<div class="history-section-title">每週復盤</div>';
+    const ans = snap.reflectionAnswers || {};
+    html += REFLECTION_QUESTIONS.map(function(q){
+      const val = ans[q.id] || '';
+      return '<div class="history-reflection-q">'
+           +   '<label class="reflection-label">'+escapeHtml(q.text)+'</label>'
+           +   '<div class="history-reflection-answer">'+(val ? escapeHtml(val) : '（未填寫）')+'</div>'
+           + '</div>';
+    }).join('');
+
+    contentEl.innerHTML = html;
+  }
+
+  function setupHistoryTab(){
+    document.getElementById('history-select').addEventListener('change', function(e){
+      renderHistorySnapshot(e.target.value);
     });
   }
 
@@ -1295,11 +1794,19 @@
     if(state.lastTarget){
       state.lastTarget.classList.remove('drag-over');
       const r = +state.lastTarget.dataset.r, c = +state.lastTarget.dataset.c;
-      weeklyGrid[r][c].content = state.label;
-      weeklyGrid[r][c].checked = false;
-      weeklyGrid[r][c].isCustom = (state.source === 'custom');
-      buildWeeklyTable();
-      saveWeekly();
+      if(r === -1){
+        habitRow[c].content = state.label;
+        habitRow[c].checked = false;
+        habitRow[c].isCustom = (state.source === 'custom');
+        buildWeeklyTable();
+        saveHabitRow();
+      } else {
+        weeklyGrid[r][c].content = state.label;
+        weeklyGrid[r][c].checked = false;
+        weeklyGrid[r][c].isCustom = (state.source === 'custom');
+        buildWeeklyTable();
+        saveWeekly();
+      }
     }
   });
 
@@ -1308,6 +1815,7 @@
     table.querySelectorAll('td.w-cell').forEach(function(td){
       td.addEventListener('mousedown', function(e){
         if(!editMode) return;
+        if(+td.dataset.r === -1) return; // 習慣追蹤列不參與合併選取
         if(e.target.classList.contains('cell-clear')) return;
         selecting = true;
         const r = +td.dataset.r, c = +td.dataset.c;
@@ -1317,6 +1825,7 @@
       });
       td.addEventListener('mouseenter', function(){
         if(!editMode) return;
+        if(+td.dataset.r === -1) return; // 習慣追蹤列不參與合併選取
         if(!selecting) return;
         updateSelectionRect(+td.dataset.r, +td.dataset.c);
       });
@@ -1334,30 +1843,51 @@
         if(!label) return;
         const source = e.dataTransfer.getData('application/x-chip-source');
         const r = +td.dataset.r, c = +td.dataset.c;
-        weeklyGrid[r][c].content = label;
-        weeklyGrid[r][c].checked = false;
-        weeklyGrid[r][c].isCustom = (source === 'custom');
-        buildWeeklyTable();
-        saveWeekly();
+        if(r === -1){
+          habitRow[c].content = label;
+          habitRow[c].checked = false;
+          habitRow[c].isCustom = (source === 'custom');
+          buildWeeklyTable();
+          saveHabitRow();
+        } else {
+          weeklyGrid[r][c].content = label;
+          weeklyGrid[r][c].checked = false;
+          weeklyGrid[r][c].isCustom = (source === 'custom');
+          buildWeeklyTable();
+          saveWeekly();
+        }
       });
     });
     table.querySelectorAll('.cell-clear').forEach(function(btn){
       btn.addEventListener('click', function(e){
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
-        weeklyGrid[r][c].content = '';
-        weeklyGrid[r][c].checked = false;
-        buildWeeklyTable();
-        saveWeekly();
+        if(r === -1){
+          habitRow[c].content = '';
+          habitRow[c].checked = false;
+          buildWeeklyTable();
+          saveHabitRow();
+        } else {
+          weeklyGrid[r][c].content = '';
+          weeklyGrid[r][c].checked = false;
+          buildWeeklyTable();
+          saveWeekly();
+        }
       });
     });
     table.querySelectorAll('.cell-check').forEach(function(btn){
       btn.addEventListener('click', function(e){
         e.stopPropagation();
         const r = +btn.dataset.r, c = +btn.dataset.c;
-        weeklyGrid[r][c].checked = !weeklyGrid[r][c].checked;
-        buildWeeklyTable();
-        saveWeekly();
+        if(r === -1){
+          habitRow[c].checked = !habitRow[c].checked;
+          buildWeeklyTable();
+          saveHabitRow();
+        } else {
+          weeklyGrid[r][c].checked = !weeklyGrid[r][c].checked;
+          buildWeeklyTable();
+          saveWeekly();
+        }
       });
     });
   }
@@ -1463,31 +1993,27 @@
   }
 
   // ---------------- Tabs ----------------
+  const TAB_IDS = ['mandala', 'weekly', 'history'];
   function switchTab(target){
-    const tabMandala = document.getElementById('tab-mandala');
-    const tabWeekly = document.getElementById('tab-weekly');
-    const btabMandala = document.getElementById('btab-mandala');
-    const btabWeekly = document.getElementById('btab-weekly');
-    const panelMandala = document.getElementById('panel-mandala');
-    const panelWeekly = document.getElementById('panel-weekly');
-    const isMandala = target === 'mandala';
-    tabMandala.classList.toggle('active', isMandala);
-    tabWeekly.classList.toggle('active', !isMandala);
-    btabMandala.classList.toggle('active', isMandala);
-    btabWeekly.classList.toggle('active', !isMandala);
-    panelMandala.classList.toggle('active', isMandala);
-    panelWeekly.classList.toggle('active', !isMandala);
-    if(!isMandala){
+    TAB_IDS.forEach(function(id){
+      const isActive = id === target;
+      document.getElementById('tab-'+id).classList.toggle('active', isActive);
+      document.getElementById('btab-'+id).classList.toggle('active', isActive);
+      document.getElementById('panel-'+id).classList.toggle('active', isActive);
+    });
+    if(target === 'weekly'){
       buildGoalList(); // refresh labels from latest mandala text
       buildMobileAgenda();
+    } else if(target === 'history'){
+      buildHistorySelect();
     }
   }
 
   function setupTabs(){
-    document.getElementById('tab-mandala').addEventListener('click', function(){ switchTab('mandala'); });
-    document.getElementById('tab-weekly').addEventListener('click', function(){ switchTab('weekly'); });
-    document.getElementById('btab-mandala').addEventListener('click', function(){ switchTab('mandala'); });
-    document.getElementById('btab-weekly').addEventListener('click', function(){ switchTab('weekly'); });
+    TAB_IDS.forEach(function(id){
+      document.getElementById('tab-'+id).addEventListener('click', function(){ switchTab(id); });
+      document.getElementById('btab-'+id).addEventListener('click', function(){ switchTab(id); });
+    });
   }
 
   function setupToolbar(){
@@ -1522,12 +2048,14 @@
       buildWeeklyTable();
     });
     document.getElementById('btn-clear-week').addEventListener('click', function(){
-      const ok = confirm('確定要清空本週所有內容、打勾記錄與合併版面嗎?此動作無法復原。');
+      const ok = confirm('確定要清空本週所有內容(含時段格與習慣追蹤列)、打勾記錄與合併版面嗎?此動作無法復原。(每週復盤的回答不受影響,不會被清除)');
       if(!ok) return;
       clearSelection();
       initWeeklyGrid(true);
+      initHabitRow(true);
       buildWeeklyTable();
       saveWeekly();
+      saveHabitRow();
     });
     updateEditUI();
   }
@@ -1620,6 +2148,7 @@
     await loadAll();
     buildMandala();
     initWeeklyGrid();
+    initHabitRow();
     buildWeeklyTable();
     buildGoalList();
     buildCustomList();
@@ -1629,6 +2158,7 @@
     setupTopbar();
     setupSyncCode();
     setupMobileDaySwitcher();
+    setupHistoryTab();
 
     // 開啟網站時，順便問雲端「這組同步碼」有沒有更新的資料。
     // 如果有，就蓋掉剛剛從 localStorage 讀到的內容並重新渲染。
