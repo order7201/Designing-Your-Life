@@ -408,6 +408,10 @@
   .clear-btn{color:var(--ink);}
   .edit-btn{color:var(--success);}
   .edit-btn.editing{color:var(--danger);}
+  .next-week-btn{color:var(--amber);margin-right:auto;}
+  .next-week-btn.active-next-week{background:var(--amber);color:#fff;border-color:var(--amber);}
+  .next-week-btn svg{transition:transform 0.15s ease;}
+  .next-week-btn.active-next-week svg{transform:rotate(180deg);}
 
   .toolbar{
     display:none;
@@ -625,6 +629,49 @@
     resize:vertical;
   }
   .reflection-input:focus{border-color:var(--amber);}
+
+  /* ---------- DEBUG-WEEKDAY: 暫時的除錯面板樣式，測試完可整段刪除 ---------- */
+  .debug-weekday-panel{
+    position:fixed;
+    right:12px;
+    bottom:12px;
+    z-index:1200;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#2d2a26;
+    color:#f4efe6;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    padding:8px 10px;
+    border-radius:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.28);
+    border:1px dashed #d99a2b;
+    pointer-events:none; /* 面板本身(背景/間距/文字)不吃掉點擊，避免萬一疊到其他按鈕時擋住操作 */
+  }
+  .debug-weekday-title{white-space:nowrap;}
+  .debug-weekday-panel select{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    padding:3px 4px;
+    border-radius:4px;
+    border:1px solid #999;
+    pointer-events:auto; /* 只有下拉選單本身需要能點擊 */
+  }
+  .debug-weekday-current{
+    white-space:nowrap;
+    color:#f2c265;
+    font-weight:600;
+  }
+  @media (max-width: 720px){
+    .debug-weekday-panel{
+      left:8px;
+      right:8px;
+      bottom:calc(70px + env(safe-area-inset-bottom));
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+  }
 
   /* ---------- Toast notification ---------- */
   .toast{
@@ -892,6 +939,25 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- DEBUG-WEEKDAY: 暫時的除錯面板，讓你不用等到真的週日/週一就能測試「每週復盤只在週日顯示」
+       跟未來的「編輯下週週計畫」功能。功能都確認、測試完畢後，把這一整塊(含下面 CSS 跟 JS 裡
+       標註 DEBUG-WEEKDAY 的部分)刪掉即可還原成正常版本。 -->
+  <div id="debug-weekday-panel" class="debug-weekday-panel">
+    <span class="debug-weekday-title">🧪 除錯：模擬今天星期</span>
+    <select id="debug-weekday-select">
+      <option value="real">使用真實日期</option>
+      <option value="1">模擬週一</option>
+      <option value="2">模擬週二</option>
+      <option value="3">模擬週三</option>
+      <option value="4">模擬週四</option>
+      <option value="5">模擬週五</option>
+      <option value="6">模擬週六</option>
+      <option value="0">模擬週日</option>
+      <option value="nextweek">模擬下週一(測試自動轉正)</option>
+    </select>
+    <span id="debug-weekday-current" class="debug-weekday-current"></span>
+  </div>
+
   <section id="panel-mandala" class="panel active">
     <div class="mandala-wrap">
       <div id="mandala-grid"></div>
@@ -911,6 +977,10 @@
       </aside>
       <div class="weekly-main">
         <div class="weekly-topbar">
+          <button id="btn-toggle-next-week" class="icon-btn next-week-btn" type="button">
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
+            <span id="btn-toggle-next-week-label">切換到下週</span>
+          </button>
           <button id="btn-clear-week" class="icon-btn clear-btn" type="button">
             <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
             清除
@@ -1014,6 +1084,18 @@
   let customItems = []; // array of strings, user-added "其他" items
   let editMode = false; // false = 鎖定/檢視模式(顯示打勾), true = 編輯模式(可拖曳修改)
   let habitRow = null; // [col] = {content, checked, isCustom}，習慣追蹤列(不屬於任何時段)，每天一格
+
+  // ---- 「切換到下週」功能 ----
+  // 設計上不做成「兩份平行資料、所有函式都要判斷要用哪一份」，而是採用「交換」的做法：
+  // weeklyGrid / habitRow 永遠代表「目前畫面上顯示、可以編輯的那一週」，
+  // otherWeekGrid / otherWeekHabitRow 則放著「目前沒有顯示的另一週」的資料。
+  // 按下「切換到下週」時，把這兩組變數整組互換即可，所有既有的拖曳/合併/打勾/存檔邏輯完全不用改，
+  // 因為它們本來就只認 weeklyGrid / habitRow 這兩個變數。
+  // viewingNextWeek = false 時: weeklyGrid=本週, otherWeekGrid=下週草稿
+  // viewingNextWeek = true  時: weeklyGrid=下週草稿, otherWeekGrid=本週
+  let viewingNextWeek = false;
+  let otherWeekGrid = null;
+  let otherWeekHabitRow = null;
   let reflectionAnswers = {}; // "問題id" -> 文字回答
   let weeklyHistory = {}; // "YYYY-MM-DD"(該週週一的日期) -> {weekKey, savedAt, weeklyGrid, habitRow, reflectionAnswers}
 
@@ -1034,17 +1116,38 @@
   // ---------------- This week's dates (auto, no manual input) ----------------
   // 用瀏覽器當下的系統日期，往回算出「本週的週一」，週一~週日就自動往後推算。
   // 過了週一 00:00，這裡重新計算就會自動變成新的一週，不需要使用者手動操作。
+
+  // 【暫時的除錯功能】讓開發/測試期間不用等到真的週日、週一才能看效果。
+  // debugForcedDow: null = 使用真實系統日期；0~6 = 強制把「今天」模擬成星期幾(0=週日,...,6=週六)。
+  // 所有原本呼叫 new Date() 來判斷「現在」的地方都改呼叫 getNow()，這樣模擬才會連動到
+  // 週一日期計算、isSundayToday() 判斷…等所有相關邏輯，而不只是改畫面上的文字。
+  // 這個機制之後功能都確定、測試完畢後可以整個移除(搜尋 "DEBUG-WEEKDAY" 可以找到所有相關程式碼)。
+  let debugForcedDow = null; // DEBUG-WEEKDAY: null=真實日期; 0~6=強制模擬今天是星期幾
+  let debugForceNextWeek = false; // DEBUG-WEEKDAY: true=額外把日期往後跳 7 天，用來測試「跨週轉正」
+  function getNow(){ // DEBUG-WEEKDAY
+    const real = new Date();
+    let base = real;
+    if(debugForceNextWeek){
+      base = new Date(real.getFullYear(), real.getMonth(), real.getDate() + 7, real.getHours(), real.getMinutes(), real.getSeconds());
+    }
+    if(debugForcedDow === null) return base;
+    const diff = debugForcedDow - base.getDay();
+    return new Date(base.getFullYear(), base.getMonth(), base.getDate() + diff, base.getHours(), base.getMinutes(), base.getSeconds());
+  }
+
   function getMondayOfThisWeek(){
-    const now = new Date();
+    const now = getNow();
     const dow = now.getDay(); // 0=週日,1=週一,...,6=週六
     const diffToMonday = (dow === 0) ? -6 : (1 - dow);
     return new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
   }
-  function getWeekDates(){
+  // offsetWeeks: 0=本週(預設), 1=下週。用在「切換到下週」畫面時顯示下週的日期。
+  function getWeekDates(offsetWeeks){
+    offsetWeeks = offsetWeeks || 0;
     const monday = getMondayOfThisWeek();
     const dates = [];
     for(let i=0;i<7;i++){
-      dates.push(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+      dates.push(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i + offsetWeeks*7));
     }
     return dates;
   }
@@ -1052,7 +1155,7 @@
     return (d.getMonth()+1)+'/'+d.getDate();
   }
   function isSundayToday(){
-    return new Date().getDay() === 0;
+    return getNow().getDay() === 0;
   }
 
   function escapeHtml(str){
@@ -1088,6 +1191,14 @@
       if(v) habitRow = JSON.parse(v);
     }catch(e){ /* no saved data yet */ }
     try{
+      const v = localStorage.getItem('next-weekly-grid');
+      if(v) otherWeekGrid = JSON.parse(v);
+    }catch(e){ /* no saved data yet */ }
+    try{
+      const v = localStorage.getItem('next-habit-row');
+      if(v) otherWeekHabitRow = JSON.parse(v);
+    }catch(e){ /* no saved data yet */ }
+    try{
       const v = localStorage.getItem('weekly-reflection');
       if(v) reflectionAnswers = JSON.parse(v);
     }catch(e){ /* no saved data yet */ }
@@ -1110,15 +1221,25 @@
   async function cloudPush(){
     if(!db) return;
     const code = getSyncCode();
+    // weeklyGrid/habitRow 目前是「本週」還是「下週草稿」要看 viewingNextWeek，
+    // 這裡統一換算成「本週」跟「下週」各自該存進哪個 Firestore 欄位，避免存反。
+    const curGrid = viewingNextWeek ? otherWeekGrid : weeklyGrid;
+    const curHabit = viewingNextWeek ? otherWeekHabitRow : habitRow;
+    const nextGrid = viewingNextWeek ? weeklyGrid : otherWeekGrid;
+    const nextHabit = viewingNextWeek ? habitRow : otherWeekHabitRow;
     try{
+      // 這裡一定要加 {merge:true}！之前沒加的話，.set() 沒包含的欄位(例如 history)
+      // 每次自動存檔都會被整份覆蓋、直接消失，是既有的資料遺失風險，這次順便修掉。
       await db.collection('synced-data').doc(code).set({
         mandala: mandalaData,
-        weeklyJson: JSON.stringify(weeklyGrid), // Firestore 不支援巢狀陣列，週計畫是二維陣列，先轉成字串再存
+        weeklyJson: JSON.stringify(curGrid), // Firestore 不支援巢狀陣列，週計畫是二維陣列，先轉成字串再存
         customItems: customItems,
-        habitJson: JSON.stringify(habitRow), // 習慣追蹤列跟 weeklyGrid 同樣是「陣列包物件」的表格結構，統一也轉字串存，避免格式不一致
+        habitJson: JSON.stringify(curHabit), // 習慣追蹤列跟 weeklyGrid 同樣是「陣列包物件」的表格結構，統一也轉字串存，避免格式不一致
+        nextWeeklyJson: JSON.stringify(nextGrid), // 下週草稿，格式跟 weeklyJson 一樣
+        nextHabitJson: JSON.stringify(nextHabit), // 下週草稿的習慣追蹤列
         reflection: reflectionAnswers, // 單純的 {題目id: 文字} 平面物件，Firestore 原生支援，不需要轉字串
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }, {merge:true});
     }catch(e){
       console.error('雲端同步失敗(寫入)', e);
     }
@@ -1162,6 +1283,12 @@
       if(data.habitJson){
         try{ habitRow = JSON.parse(data.habitJson); }catch(e){ /* 忽略壞資料 */ }
       }
+      if(data.nextWeeklyJson){
+        try{ otherWeekGrid = JSON.parse(data.nextWeeklyJson); }catch(e){ /* 忽略壞資料 */ }
+      }
+      if(data.nextHabitJson){
+        try{ otherWeekHabitRow = JSON.parse(data.nextHabitJson); }catch(e){ /* 忽略壞資料 */ }
+      }
       if(data.reflection) reflectionAnswers = data.reflection;
       if(data.history){
         const parsedHistory = {};
@@ -1171,6 +1298,12 @@
         weeklyHistory = parsedHistory;
         try{ localStorage.setItem('weekly-history', JSON.stringify(weeklyHistory)); }catch(e){ /* 儲存失敗就算了，記憶體內還是最新的 */ }
       }
+      // cloudPull() 只會在「viewingNextWeek 還是 false」的時機點呼叫(開啟網站時、或輸入同步碼時)，
+      // 所以這裡直接假設 weeklyGrid/habitRow=本週、otherWeekGrid/otherWeekHabitRow=下週草稿。
+      // saveWeekly()/saveHabitRow() 只會存到「目前 viewingNextWeek 對應的那個 key」(本週)，
+      // 下週草稿要另外手動存一次，才不會漏存。
+      try{ localStorage.setItem('next-weekly-grid', JSON.stringify(otherWeekGrid)); }catch(e){ /* 忽略 */ }
+      try{ localStorage.setItem('next-habit-row', JSON.stringify(otherWeekHabitRow)); }catch(e){ /* 忽略 */ }
       await saveMandala(true);
       await saveWeekly(true);
       await saveCustomItems(true);
@@ -1201,7 +1334,10 @@
     if(!skipCloud) scheduleCloudPush();
   }
   async function saveWeekly(skipCloud){
-    try{ localStorage.setItem('weekly-grid', JSON.stringify(weeklyGrid)); }
+    // weeklyGrid 這個變數目前代表的是「本週」還是「下週草稿」，取決於 viewingNextWeek，
+    // 所以存檔的 localStorage key 也要跟著判斷，才不會把下週草稿存錯地方蓋掉本週資料(或反過來)。
+    const key = viewingNextWeek ? 'next-weekly-grid' : 'weekly-grid';
+    try{ localStorage.setItem(key, JSON.stringify(weeklyGrid)); }
     catch(e){ console.error('儲存週計畫失敗', e); }
     if(!skipCloud) scheduleCloudPush();
   }
@@ -1212,7 +1348,8 @@
   }
   // 習慣追蹤列跟 weeklyGrid 一樣是「拖曳/打勾/清除」這種一次性動作觸發存檔，不需要 debounce
   async function saveHabitRow(skipCloud){
-    try{ localStorage.setItem('habit-row', JSON.stringify(habitRow)); }
+    const key = viewingNextWeek ? 'next-habit-row' : 'habit-row';
+    try{ localStorage.setItem(key, JSON.stringify(habitRow)); }
     catch(e){ console.error('儲存習慣追蹤失敗', e); }
     if(!skipCloud) scheduleCloudPush();
   }
@@ -1364,24 +1501,33 @@
   }
 
   // ---------------- Weekly table ----------------
-  function initWeeklyGrid(force){
-    if(weeklyGrid && !force) return;
-    weeklyGrid = [];
+  function makeBlankGrid(){
+    const grid = [];
     for(let r=0;r<ROWS;r++){
       const row = [];
       for(let c=0;c<COLS;c++){
         row.push({content:'', rowSpan:1, colSpan:1, hidden:false, checked:false, isCustom:false});
       }
-      weeklyGrid.push(row);
+      grid.push(row);
     }
+    return grid;
+  }
+  function makeBlankHabitRow(){
+    const row = [];
+    for(let c=0;c<COLS;c++){
+      row.push({items: []});
+    }
+    return row;
+  }
+
+  function initWeeklyGrid(force){
+    if(weeklyGrid && !force) return;
+    weeklyGrid = makeBlankGrid();
   }
 
   function initHabitRow(force){
     if(habitRow && !force){ normalizeHabitRow(); return; }
-    habitRow = [];
-    for(let c=0;c<COLS;c++){
-      habitRow.push({items: []});
-    }
+    habitRow = makeBlankHabitRow();
   }
 
   // 習慣追蹤列的資料格式從「一格一項 {content,checked,isCustom}」改成「一格多項 {items:[...]}」。
@@ -1462,7 +1608,7 @@
 
   function buildWeeklyTable(){
     const table = document.getElementById('weekly-table');
-    const weekDates = getWeekDates();
+    const weekDates = getWeekDates(viewingNextWeek ? 1 : 0);
     let html = '<thead><tr><th class="corner-th"></th>';
     DAYS.forEach(function(d, i){ html += '<th>'+d+'<span class="th-date">'+formatDateShort(weekDates[i])+'</span></th>'; });
     html += '</tr></thead><tbody>';
@@ -1508,7 +1654,7 @@
     const label = document.getElementById('day-switcher-label');
     const list = document.getElementById('agenda-list');
     if(!label || !list) return;
-    label.textContent = DAYS[mobileDayIndex] + ' ' + formatDateShort(getWeekDates()[mobileDayIndex]);
+    label.textContent = DAYS[mobileDayIndex] + ' ' + formatDateShort(getWeekDates(viewingNextWeek ? 1 : 0)[mobileDayIndex]);
 
     // 習慣追蹤永遠排在該天 agenda 最上方(每天都要看到，不限特定時段)
     const hRendered = renderHabitCellMarkup(habitRow[mobileDayIndex], mobileDayIndex);
@@ -1631,11 +1777,11 @@
   }
 
   // ---------------- Weekly reflection ----------------
-  // 暫時無條件顯示(桌面版、手機版都一樣)。
-  // 之後要恢復「只有週日才顯示」的規則時，把下面這行改回:
-  //   const showReflection = isSundayToday();
+  // 2026-08-04 起恢復「只有週日才顯示」的規則(桌面版、手機版一致)。
+  // 如果之後又想暫時無條件顯示，把下面這行改回 const showReflection = true; 即可。
+  // 另外：檢視「下週草稿」時一律不顯示復盤(復盤是回顧「已經過完的這週」，跟還沒開始的下週無關)。
   function buildReflection(){
-    const showReflection = true;
+    const showReflection = !viewingNextWeek && isSundayToday();
     const qHtml = REFLECTION_QUESTIONS.map(function(q){
       const val = reflectionAnswers[q.id] || '';
       return '<div class="reflection-q">'
@@ -2104,6 +2250,14 @@
     }
   }
 
+  function updateNextWeekToggleUI(){
+    const btn = document.getElementById('btn-toggle-next-week');
+    const label = document.getElementById('btn-toggle-next-week-label');
+    if(!btn || !label) return;
+    btn.classList.toggle('active-next-week', viewingNextWeek);
+    label.textContent = viewingNextWeek ? '返回本週' : '切換到下週';
+  }
+
   function setupTopbar(){
     document.getElementById('btn-edit-toggle').addEventListener('click', function(){
       editMode = !editMode;
@@ -2112,8 +2266,21 @@
       buildCustomList();
       buildWeeklyTable();
     });
+    document.getElementById('btn-toggle-next-week').addEventListener('click', function(){
+      // 「切換到下週」用交換變數的方式實作，細節說明見上面 viewingNextWeek 的宣告處註解。
+      viewingNextWeek = !viewingNextWeek;
+      const tmpGrid = weeklyGrid, tmpHabit = habitRow;
+      weeklyGrid = otherWeekGrid;
+      habitRow = otherWeekHabitRow;
+      otherWeekGrid = tmpGrid;
+      otherWeekHabitRow = tmpHabit;
+      clearSelection();
+      updateNextWeekToggleUI();
+      buildWeeklyTable();
+    });
     document.getElementById('btn-clear-week').addEventListener('click', function(){
-      const ok = confirm('確定要清空本週所有內容(含時段格與習慣追蹤列)、打勾記錄與合併版面嗎?此動作無法復原。(每週復盤的回答不受影響,不會被清除)');
+      const weekLabel = viewingNextWeek ? '下週草稿' : '本週';
+      const ok = confirm('確定要清空'+weekLabel+'所有內容(含時段格與習慣追蹤列)、打勾記錄與合併版面嗎?此動作無法復原。(每週復盤的回答不受影響,不會被清除)');
       if(!ok) return;
       clearSelection();
       initWeeklyGrid(true);
@@ -2123,6 +2290,113 @@
       saveHabitRow();
     });
     updateEditUI();
+    updateNextWeekToggleUI();
+  }
+
+  // ---------------- DEBUG-WEEKDAY: 除錯用的星期切換面板 ----------------
+  // 測試完畢、功能都定案後，可以把這個函式、init() 裡呼叫它的那一行、
+  // 還有上面 HTML/CSS 裡標註 DEBUG-WEEKDAY 的部分一起刪掉。
+  const DOW_LABEL = ['週日','週一','週二','週三','週四','週五','週六'];
+  function updateDebugWeekdayDisplay(){
+    const el = document.getElementById('debug-weekday-current');
+    if(!el) return;
+    const now = getNow();
+    el.textContent = '目前模擬：' + DOW_LABEL[now.getDay()] + ' ' + (now.getMonth()+1) + '/' + now.getDate()
+                    + (debugForcedDow === null ? '(真實日期)' : '(模擬)');
+  }
+  function setupDebugWeekdayPanel(){
+    const select = document.getElementById('debug-weekday-select');
+    if(!select) return;
+    select.addEventListener('change', function(){
+      const val = select.value;
+      if(val === 'real'){
+        debugForcedDow = null;
+        debugForceNextWeek = false;
+        updateDebugWeekdayDisplay();
+        // 重新整理跟「今天」有關的所有畫面：週一~週日日期、每週復盤是否顯示、手機切天標籤等。
+        buildWeeklyTable();
+      } else if(val === 'nextweek'){
+        debugForceNextWeek = true;
+        debugForcedDow = 1; // 下週一
+        updateDebugWeekdayDisplay();
+        // 這裡直接呼叫 promoteNextWeekToCurrent()，而不是走 checkWeekRollover()：
+        // checkWeekRollover() 會記錄「這週已經轉正過了」、下次同一週就不會再做事，
+        // 這對「正式的自動轉正」是對的行為，但對「測試用的手動按鈕」是錯的——
+        // 你會需要「編輯下週 → 存檔 → 測試轉正」重複測很多次，每次選這個選項都應該要無條件執行一次。
+        promoteNextWeekToCurrent();
+      } else {
+        debugForceNextWeek = false;
+        debugForcedDow = Number(val);
+        updateDebugWeekdayDisplay();
+        buildWeeklyTable();
+      }
+    });
+    updateDebugWeekdayDisplay();
+  }
+
+  // ---------------- 週次轉正(週一 00:00 後，下週草稿變成本週資料) ----------------
+  // 這個網站是純前端、沒有後端排程，沒辦法在背景真的準時於週一 00:00 觸發，
+  // 只能在使用者「打開/重新整理網站」的當下，比對「現在算出來的本週一」跟「上次記錄的本週一」
+  // 是否不同；不同就代表已經跨過至少一個週一，觸發「下週草稿直接變成本週資料」。
+  // 注意：多裝置情境下，這個判斷是「各裝置各自根據自己當下的系統時間判斷」，
+  // 不是雲端統一觸發，所以理論上不同裝置有可能在不同時間點各自轉正一次，這是目前這個純前端
+  // 架構下的已知限制，跟現在「週一日期顯示」依賴各裝置本地時間的做法是一致的。
+  const CURRENT_WEEK_KEY_STORAGE = 'weekly-grid-week-key';
+  function weekKeyOf(dateObj){
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth()+1).padStart(2,'0');
+    const d = String(dateObj.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+d;
+  }
+
+  // 實際「把下週草稿變成本週資料」的動作，抽成獨立函式：
+  // - 正式的自動轉正(checkWeekRollover)會呼叫它
+  // - DEBUG-WEEKDAY 的「模擬下週一」選項也會直接呼叫它，而且是「每次選都無條件執行」，
+  //   不像 checkWeekRollover 那樣會記錄「這週已經轉正過了」而跳過——因為測試的時候你會需要
+  //   一直重複「編輯下週 → 存檔 → 測試轉正」，如果也套用同一套「同一週只觸發一次」的記錄，
+  //   除了第一次以外每次都會被擋下來，就是這次你遇到的狀況。
+  function promoteNextWeekToCurrent(){
+    // 不能直接假設 weeklyGrid=本週、otherWeekGrid=下週草稿，因為使用者當下有可能正在
+    // 「切換到下週」畫面，這時候變數是反過來的，要先判斷 viewingNextWeek 再對應。
+    const draftGrid = viewingNextWeek ? weeklyGrid : otherWeekGrid;
+    const draftHabit = viewingNextWeek ? habitRow : otherWeekHabitRow;
+
+    weeklyGrid = draftGrid;
+    habitRow = draftHabit;
+    otherWeekGrid = makeBlankGrid();
+    otherWeekHabitRow = makeBlankHabitRow();
+    viewingNextWeek = false; // 轉正後一律顯示新的本週，不管轉正前使用者在哪個檢視模式
+
+    saveWeekly(true);
+    saveHabitRow(true);
+    try{ localStorage.setItem('next-weekly-grid', JSON.stringify(otherWeekGrid)); }catch(e){ /* 忽略 */ }
+    try{ localStorage.setItem('next-habit-row', JSON.stringify(otherWeekHabitRow)); }catch(e){ /* 忽略 */ }
+    scheduleCloudPush();
+    updateNextWeekToggleUI();
+    buildWeeklyTable();
+    showToast('已經進入新的一週，週計畫已自動更新');
+  }
+
+  // 只用於「真實日期、自動」的轉正判斷；只在 init() 打開網站時呼叫一次。
+  // 這裡才需要「同一週只觸發一次」的記錄(CURRENT_WEEK_KEY_STORAGE)，
+  // 否則使用者同一週內每次重新整理頁面都會誤觸發一次。
+  function checkWeekRollover(){
+    const nowMonday = getMondayOfThisWeek();
+    const nowKey = weekKeyOf(nowMonday);
+    let storedKey = null;
+    try{ storedKey = localStorage.getItem(CURRENT_WEEK_KEY_STORAGE); }catch(e){ /* 忽略 */ }
+
+    if(storedKey === null){
+      // 第一次使用這個功能(包含既有使用者升級後第一次打開)，還沒有任何紀錄可比對，
+      // 先把「現在算出來的本週一」記起來就好，不要誤觸發轉正、清掉既有資料。
+      try{ localStorage.setItem(CURRENT_WEEK_KEY_STORAGE, nowKey); }catch(e){ /* 忽略 */ }
+      return;
+    }
+    if(storedKey === nowKey) return; // 還在同一週，不用做事
+    if(new Date(nowKey) < new Date(storedKey)) return; // 日期「往回跳」，不觸發轉正
+
+    try{ localStorage.setItem(CURRENT_WEEK_KEY_STORAGE, nowKey); }catch(e){ /* 忽略 */ }
+    promoteNextWeekToCurrent();
   }
 
   // ---------------- Sync code ----------------
@@ -2214,6 +2488,9 @@
     buildMandala();
     initWeeklyGrid();
     initHabitRow();
+    if(!otherWeekGrid) otherWeekGrid = makeBlankGrid();
+    if(!otherWeekHabitRow) otherWeekHabitRow = makeBlankHabitRow();
+    checkWeekRollover(); // 打開網站時，先確認有沒有跨過週一，該轉正的話在第一次畫面渲染前就先處理好
     buildWeeklyTable();
     buildGoalList();
     buildCustomList();
@@ -2224,6 +2501,7 @@
     setupSyncCode();
     setupMobileDaySwitcher();
     setupHistoryTab();
+    setupDebugWeekdayPanel(); // DEBUG-WEEKDAY
 
     // 開啟網站時，順便問雲端「這組同步碼」有沒有更新的資料。
     // 如果有，就蓋掉剛剛從 localStorage 讀到的內容並重新渲染。
