@@ -2367,6 +2367,12 @@
     otherWeekHabitRow = makeBlankHabitRow();
     viewingNextWeek = false; // 轉正後一律顯示新的本週，不管轉正前使用者在哪個檢視模式
 
+    // 每週復盤的回答也要跟著歸零，不然下週日打開會看到上週寫的內容。
+    // 已經按過「儲存本週記錄」的舊回答不受影響，完整保留在歷史週計畫檢視分頁裡；
+    // 這裡清掉的只是畫面上「還沒存檔」的即時回答。
+    reflectionAnswers = {};
+    saveReflection(true);
+
     saveWeekly(true);
     saveHabitRow(true);
     try{ localStorage.setItem('next-weekly-grid', JSON.stringify(otherWeekGrid)); }catch(e){ /* 忽略 */ }
