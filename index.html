@@ -630,49 +630,6 @@
   }
   .reflection-input:focus{border-color:var(--amber);}
 
-  /* ---------- DEBUG-WEEKDAY: 暫時的除錯面板樣式，測試完可整段刪除 ---------- */
-  .debug-weekday-panel{
-    position:fixed;
-    right:12px;
-    bottom:12px;
-    z-index:1200;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    background:#2d2a26;
-    color:#f4efe6;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.72rem;
-    padding:8px 10px;
-    border-radius:8px;
-    box-shadow:0 6px 18px rgba(0,0,0,0.28);
-    border:1px dashed #d99a2b;
-    pointer-events:none; /* 面板本身(背景/間距/文字)不吃掉點擊，避免萬一疊到其他按鈕時擋住操作 */
-  }
-  .debug-weekday-title{white-space:nowrap;}
-  .debug-weekday-panel select{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.72rem;
-    padding:3px 4px;
-    border-radius:4px;
-    border:1px solid #999;
-    pointer-events:auto; /* 只有下拉選單本身需要能點擊 */
-  }
-  .debug-weekday-current{
-    white-space:nowrap;
-    color:#f2c265;
-    font-weight:600;
-  }
-  @media (max-width: 720px){
-    .debug-weekday-panel{
-      left:8px;
-      right:8px;
-      bottom:calc(70px + env(safe-area-inset-bottom));
-      flex-wrap:wrap;
-      justify-content:center;
-    }
-  }
-
   /* ---------- Toast notification ---------- */
   .toast{
     position:fixed;
@@ -939,25 +896,6 @@
 
   <div id="toast" class="toast"></div>
 
-  <!-- DEBUG-WEEKDAY: 暫時的除錯面板，讓你不用等到真的週日/週一就能測試「每週復盤只在週日顯示」
-       跟未來的「編輯下週週計畫」功能。功能都確認、測試完畢後，把這一整塊(含下面 CSS 跟 JS 裡
-       標註 DEBUG-WEEKDAY 的部分)刪掉即可還原成正常版本。 -->
-  <div id="debug-weekday-panel" class="debug-weekday-panel">
-    <span class="debug-weekday-title">🧪 除錯：模擬今天星期</span>
-    <select id="debug-weekday-select">
-      <option value="real">使用真實日期</option>
-      <option value="1">模擬週一</option>
-      <option value="2">模擬週二</option>
-      <option value="3">模擬週三</option>
-      <option value="4">模擬週四</option>
-      <option value="5">模擬週五</option>
-      <option value="6">模擬週六</option>
-      <option value="0">模擬週日</option>
-      <option value="nextweek">模擬下週一(測試自動轉正)</option>
-    </select>
-    <span id="debug-weekday-current" class="debug-weekday-current"></span>
-  </div>
-
   <section id="panel-mandala" class="panel active">
     <div class="mandala-wrap">
       <div id="mandala-grid"></div>
@@ -1116,23 +1054,8 @@
   // ---------------- This week's dates (auto, no manual input) ----------------
   // 用瀏覽器當下的系統日期，往回算出「本週的週一」，週一~週日就自動往後推算。
   // 過了週一 00:00，這裡重新計算就會自動變成新的一週，不需要使用者手動操作。
-
-  // 【暫時的除錯功能】讓開發/測試期間不用等到真的週日、週一才能看效果。
-  // debugForcedDow: null = 使用真實系統日期；0~6 = 強制把「今天」模擬成星期幾(0=週日,...,6=週六)。
-  // 所有原本呼叫 new Date() 來判斷「現在」的地方都改呼叫 getNow()，這樣模擬才會連動到
-  // 週一日期計算、isSundayToday() 判斷…等所有相關邏輯，而不只是改畫面上的文字。
-  // 這個機制之後功能都確定、測試完畢後可以整個移除(搜尋 "DEBUG-WEEKDAY" 可以找到所有相關程式碼)。
-  let debugForcedDow = null; // DEBUG-WEEKDAY: null=真實日期; 0~6=強制模擬今天是星期幾
-  let debugForceNextWeek = false; // DEBUG-WEEKDAY: true=額外把日期往後跳 7 天，用來測試「跨週轉正」
-  function getNow(){ // DEBUG-WEEKDAY
-    const real = new Date();
-    let base = real;
-    if(debugForceNextWeek){
-      base = new Date(real.getFullYear(), real.getMonth(), real.getDate() + 7, real.getHours(), real.getMinutes(), real.getSeconds());
-    }
-    if(debugForcedDow === null) return base;
-    const diff = debugForcedDow - base.getDay();
-    return new Date(base.getFullYear(), base.getMonth(), base.getDate() + diff, base.getHours(), base.getMinutes(), base.getSeconds());
+  function getNow(){
+    return new Date();
   }
 
   function getMondayOfThisWeek(){
@@ -2293,47 +2216,6 @@
     updateNextWeekToggleUI();
   }
 
-  // ---------------- DEBUG-WEEKDAY: 除錯用的星期切換面板 ----------------
-  // 測試完畢、功能都定案後，可以把這個函式、init() 裡呼叫它的那一行、
-  // 還有上面 HTML/CSS 裡標註 DEBUG-WEEKDAY 的部分一起刪掉。
-  const DOW_LABEL = ['週日','週一','週二','週三','週四','週五','週六'];
-  function updateDebugWeekdayDisplay(){
-    const el = document.getElementById('debug-weekday-current');
-    if(!el) return;
-    const now = getNow();
-    el.textContent = '目前模擬：' + DOW_LABEL[now.getDay()] + ' ' + (now.getMonth()+1) + '/' + now.getDate()
-                    + (debugForcedDow === null ? '(真實日期)' : '(模擬)');
-  }
-  function setupDebugWeekdayPanel(){
-    const select = document.getElementById('debug-weekday-select');
-    if(!select) return;
-    select.addEventListener('change', function(){
-      const val = select.value;
-      if(val === 'real'){
-        debugForcedDow = null;
-        debugForceNextWeek = false;
-        updateDebugWeekdayDisplay();
-        // 重新整理跟「今天」有關的所有畫面：週一~週日日期、每週復盤是否顯示、手機切天標籤等。
-        buildWeeklyTable();
-      } else if(val === 'nextweek'){
-        debugForceNextWeek = true;
-        debugForcedDow = 1; // 下週一
-        updateDebugWeekdayDisplay();
-        // 這裡直接呼叫 promoteNextWeekToCurrent()，而不是走 checkWeekRollover()：
-        // checkWeekRollover() 會記錄「這週已經轉正過了」、下次同一週就不會再做事，
-        // 這對「正式的自動轉正」是對的行為，但對「測試用的手動按鈕」是錯的——
-        // 你會需要「編輯下週 → 存檔 → 測試轉正」重複測很多次，每次選這個選項都應該要無條件執行一次。
-        promoteNextWeekToCurrent();
-      } else {
-        debugForceNextWeek = false;
-        debugForcedDow = Number(val);
-        updateDebugWeekdayDisplay();
-        buildWeeklyTable();
-      }
-    });
-    updateDebugWeekdayDisplay();
-  }
-
   // ---------------- 週次轉正(週一 00:00 後，下週草稿變成本週資料) ----------------
   // 這個網站是純前端、沒有後端排程，沒辦法在背景真的準時於週一 00:00 觸發，
   // 只能在使用者「打開/重新整理網站」的當下，比對「現在算出來的本週一」跟「上次記錄的本週一」
@@ -2349,12 +2231,7 @@
     return y+'-'+m+'-'+d;
   }
 
-  // 實際「把下週草稿變成本週資料」的動作，抽成獨立函式：
-  // - 正式的自動轉正(checkWeekRollover)會呼叫它
-  // - DEBUG-WEEKDAY 的「模擬下週一」選項也會直接呼叫它，而且是「每次選都無條件執行」，
-  //   不像 checkWeekRollover 那樣會記錄「這週已經轉正過了」而跳過——因為測試的時候你會需要
-  //   一直重複「編輯下週 → 存檔 → 測試轉正」，如果也套用同一套「同一週只觸發一次」的記錄，
-  //   除了第一次以外每次都會被擋下來，就是這次你遇到的狀況。
+  // 實際「把下週草稿變成本週資料」的動作，抽成獨立函式，讓正式的自動轉正(checkWeekRollover)呼叫。
   function promoteNextWeekToCurrent(){
     // 不能直接假設 weeklyGrid=本週、otherWeekGrid=下週草稿，因為使用者當下有可能正在
     // 「切換到下週」畫面，這時候變數是反過來的，要先判斷 viewingNextWeek 再對應。
@@ -2507,7 +2384,6 @@
     setupSyncCode();
     setupMobileDaySwitcher();
     setupHistoryTab();
-    setupDebugWeekdayPanel(); // DEBUG-WEEKDAY
 
     // 開啟網站時，順便問雲端「這組同步碼」有沒有更新的資料。
     // 如果有，就蓋掉剛剛從 localStorage 讀到的內容並重新渲染。
