@@ -2232,7 +2232,7 @@
   }
 
   // 實際「把下週草稿變成本週資料」的動作，抽成獨立函式，讓正式的自動轉正(checkWeekRollover)呼叫。
-  function promoteNextWeekToCurrent(){
+  async function promoteNextWeekToCurrent(){
     // 不能直接假設 weeklyGrid=本週、otherWeekGrid=下週草稿，因為使用者當下有可能正在
     // 「切換到下週」畫面，這時候變數是反過來的，要先判斷 viewingNextWeek 再對應。
     const draftGrid = viewingNextWeek ? weeklyGrid : otherWeekGrid;
@@ -2254,7 +2254,10 @@
     saveHabitRow(true);
     try{ localStorage.setItem('next-weekly-grid', JSON.stringify(otherWeekGrid)); }catch(e){ /* 忽略 */ }
     try{ localStorage.setItem('next-habit-row', JSON.stringify(otherWeekHabitRow)); }catch(e){ /* 忽略 */ }
-    scheduleCloudPush();
+    // 這裡刻意用「立刻等待完成」的 cloudPush()，不是平常打字/拖曳用的 scheduleCloudPush()(延遲 800ms 才送出)。
+    // 因為轉正通常發生在打開網站的當下，如果用延遲的，畫面很可能在雲端還沒收到這次結果之前，
+    // 就先執行了「跟雲端同步」，把雲端上還沒更新的舊資料抓回來蓋掉剛剛才轉正好的內容。
+    await cloudPush();
     updateNextWeekToggleUI();
     buildWeeklyTable();
     showToast('已經進入新的一週，週計畫已自動更新');
@@ -2263,7 +2266,8 @@
   // 只用於「真實日期、自動」的轉正判斷；只在 init() 打開網站時呼叫一次。
   // 這裡才需要「同一週只觸發一次」的記錄(CURRENT_WEEK_KEY_STORAGE)，
   // 否則使用者同一週內每次重新整理頁面都會誤觸發一次。
-  function checkWeekRollover(){
+  // 回傳 true/false 表示這次呼叫有沒有真的執行轉正，讓 init() 可以據此決定要不要再跟雲端同步一次。
+  async function checkWeekRollover(){
     const nowMonday = getMondayOfThisWeek();
     const nowKey = weekKeyOf(nowMonday);
     let storedKey = null;
@@ -2273,13 +2277,14 @@
       // 第一次使用這個功能(包含既有使用者升級後第一次打開)，還沒有任何紀錄可比對，
       // 先把「現在算出來的本週一」記起來就好，不要誤觸發轉正、清掉既有資料。
       try{ localStorage.setItem(CURRENT_WEEK_KEY_STORAGE, nowKey); }catch(e){ /* 忽略 */ }
-      return;
+      return false;
     }
-    if(storedKey === nowKey) return; // 還在同一週，不用做事
-    if(new Date(nowKey) < new Date(storedKey)) return; // 日期「往回跳」，不觸發轉正
+    if(storedKey === nowKey) return false; // 還在同一週，不用做事
+    if(new Date(nowKey) < new Date(storedKey)) return false; // 日期「往回跳」，不觸發轉正
 
     try{ localStorage.setItem(CURRENT_WEEK_KEY_STORAGE, nowKey); }catch(e){ /* 忽略 */ }
-    promoteNextWeekToCurrent();
+    await promoteNextWeekToCurrent();
+    return true;
   }
 
   // ---------------- Sync code ----------------
@@ -2373,7 +2378,17 @@
     initHabitRow();
     if(!otherWeekGrid) otherWeekGrid = makeBlankGrid();
     if(!otherWeekHabitRow) otherWeekHabitRow = makeBlankHabitRow();
-    checkWeekRollover(); // 打開網站時，先確認有沒有跨過週一，該轉正的話在第一次畫面渲染前就先處理好
+
+    // 先跟雲端同步一次，確保接下來「要不要轉正」的判斷是根據最新的下週草稿在做決定，
+    // 不會因為本機快取的舊資料、或雲端還沒收到別台裝置的更新，兩邊互相蓋掉彼此。
+    let cloudFound = false;
+    if(db){
+      cloudFound = await cloudPull(getSyncCode());
+    }
+
+    // 打開網站時，確認有沒有跨過週一，該轉正的話在這裡處理好(內部也會即時同步一次雲端)。
+    const rolledOver = await checkWeekRollover();
+
     buildWeeklyTable();
     buildGoalList();
     buildCustomList();
@@ -2385,12 +2400,10 @@
     setupMobileDaySwitcher();
     setupHistoryTab();
 
-    // 開啟網站時，順便問雲端「這組同步碼」有沒有更新的資料。
-    // 如果有，就蓋掉剛剛從 localStorage 讀到的內容並重新渲染。
-    // 如果雲端還沒有資料（例如第一次使用），就把目前這台裝置的內容推上雲端。
-    if(db){
-      const found = await cloudPull(getSyncCode());
-      if(!found) scheduleCloudPush();
+    // 如果剛剛沒有觸發轉正、而且雲端也還沒有這組同步碼的資料(例如第一次使用)，
+    // 才需要额外把這台裝置目前的內容推上雲端。轉正的情況已經在 checkWeekRollover() 裡處理過了。
+    if(db && !rolledOver && !cloudFound){
+      scheduleCloudPush();
     }
   }
 
