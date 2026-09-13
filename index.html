@@ -1037,6 +1037,39 @@
   let reflectionAnswers = {}; // "問題id" -> 文字回答
   let weeklyHistory = {}; // "YYYY-MM-DD"(該週週一的日期) -> {weekKey, savedAt, weeklyGrid, habitRow, reflectionAnswers}
 
+  // 本機記錄「目前這台裝置認得的本週一是哪一天」，用在轉正判斷。
+  // 搬到這裡(從原本比較後面的位置)，是因為 cloudPush() 現在也需要用到它。
+  const CURRENT_WEEK_KEY_STORAGE = 'weekly-grid-week-key';
+
+  // 雲端文件裡記錄的「目前 weeklyJson 是哪一週的資料」，由 cloudPull() 讀回來、
+  // 給 checkWeekRollover() 判斷用。跟 CURRENT_WEEK_KEY_STORAGE(本機的紀錄)分開，
+  // 因為這次的資料遺失事故就是「本機各自記錄、雲端不知道」造成的，詳見 checkWeekRollover() 的註解。
+  let cloudCurrentWeekKey = null;
+
+  // 修 bug 之後新增的保護機制：任何時候要用「雲端抓下來的資料」或「轉正後的下週草稿」
+  // 覆蓋本機的 weekly-grid / habit-row 之前，先把本機原本(即將被蓋掉)的內容另外備份一份。
+  // 就算未來又發生類似「其中一台裝置誤判轉正、把錯的資料同步回雲端」的狀況，
+  // 使用者跟我們都還能從這個備份 key 找回覆蓋前的內容，不會像這次一樣連本機都沒有退路。
+  function backupLocalBeforeOverwrite(){
+    try{
+      const g = localStorage.getItem('weekly-grid');
+      if(g) localStorage.setItem('weekly-grid-prev-backup', g);
+    }catch(e){ /* 備份失敗就算了，不能因此擋住原本的同步 */ }
+    try{
+      const h = localStorage.getItem('habit-row');
+      if(h) localStorage.setItem('habit-row-prev-backup', h);
+    }catch(e){ /* 忽略 */ }
+    // 下週草稿也會被 cloudPull()/轉正覆蓋，一併備份，跟本週資料享有同等保護。
+    try{
+      const ng = localStorage.getItem('next-weekly-grid');
+      if(ng) localStorage.setItem('next-weekly-grid-prev-backup', ng);
+    }catch(e){ /* 忽略 */ }
+    try{
+      const nh = localStorage.getItem('next-habit-row');
+      if(nh) localStorage.setItem('next-habit-row-prev-backup', nh);
+    }catch(e){ /* 忽略 */ }
+  }
+
   // 每週復盤題目
   const REFLECTION_QUESTIONS = [
     {id:'r1', text:'這週我在哪些地方花太多時間？'},
@@ -1152,6 +1185,13 @@
     const curHabit = viewingNextWeek ? otherWeekHabitRow : habitRow;
     const nextGrid = viewingNextWeek ? weeklyGrid : otherWeekGrid;
     const nextHabit = viewingNextWeek ? habitRow : otherWeekHabitRow;
+    // 這台裝置目前認定「本週資料(curGrid)是哪一週的」，優先用本機記錄的轉正結果，
+    // 沒有的話(理論上只有全新裝置第一次同步會這樣)才退回用系統時間現算一次。
+    // 這個值會存進雲端的 currentWeekKey 欄位，讓其他裝置轉正前可以問雲端「這週是不是已經有人處理過了」，
+    // 不用再只看自己那份可能很久沒更新、已經過期的本機紀錄。
+    let localWeekKey = null;
+    try{ localWeekKey = localStorage.getItem(CURRENT_WEEK_KEY_STORAGE); }catch(e){ /* 忽略 */ }
+    if(!localWeekKey) localWeekKey = weekKeyOf(getMondayOfThisWeek());
     try{
       // 這裡一定要加 {merge:true}！之前沒加的話，.set() 沒包含的欄位(例如 history)
       // 每次自動存檔都會被整份覆蓋、直接消失，是既有的資料遺失風險，這次順便修掉。
@@ -1163,6 +1203,7 @@
         nextWeeklyJson: JSON.stringify(nextGrid), // 下週草稿，格式跟 weeklyJson 一樣
         nextHabitJson: JSON.stringify(nextHabit), // 下週草稿的習慣追蹤列
         reflection: reflectionAnswers, // 單純的 {題目id: 文字} 平面物件，Firestore 原生支援，不需要轉字串
+        currentWeekKey: localWeekKey, // 目前 weeklyJson 是哪一週的資料，讓其他裝置轉正前可以先跟雲端核對
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, {merge:true});
     }catch(e){
@@ -1196,10 +1237,15 @@
   // 用於: 開啟網站時自動抓一次、或使用者輸入別台裝置用過的同步碼時。
   async function cloudPull(code){
     if(!db) return false;
+    cloudCurrentWeekKey = null; // 每次重新拉取前先重設，避免用到上一次殘留的值
     try{
       const snap = await db.collection('synced-data').doc(code).get();
       if(!snap.exists) return false;
       const data = snap.data();
+      // 雲端資料即將覆蓋本機，先把本機現有內容備份一份，就算這次雲端資料有問題，
+      // 使用者也還有退路可以從備份救回覆蓋前的內容。
+      backupLocalBeforeOverwrite();
+      if(data.currentWeekKey) cloudCurrentWeekKey = data.currentWeekKey;
       if(data.mandala) mandalaData = data.mandala;
       if(data.weeklyJson){
         try{ weeklyGrid = JSON.parse(data.weeklyJson); }catch(e){ /* 忽略壞資料 */ }
@@ -2220,12 +2266,21 @@
 
   // ---------------- 週次轉正(週一 00:00 後，下週草稿變成本週資料) ----------------
   // 這個網站是純前端、沒有後端排程，沒辦法在背景真的準時於週一 00:00 觸發，
-  // 只能在使用者「打開/重新整理網站」的當下，比對「現在算出來的本週一」跟「上次記錄的本週一」
-  // 是否不同；不同就代表已經跨過至少一個週一，觸發「下週草稿直接變成本週資料」。
-  // 注意：多裝置情境下，這個判斷是「各裝置各自根據自己當下的系統時間判斷」，
-  // 不是雲端統一觸發，所以理論上不同裝置有可能在不同時間點各自轉正一次，這是目前這個純前端
-  // 架構下的已知限制，跟現在「週一日期顯示」依賴各裝置本地時間的做法是一致的。
-  const CURRENT_WEEK_KEY_STORAGE = 'weekly-grid-week-key';
+  // 只能在使用者「打開/重新整理網站」的當下，判斷是否已經跨過至少一個週一，
+  // 觸發「下週草稿直接變成本週資料」。
+  //
+  // 2026-09-13 修過一次嚴重的資料遺失事故，根本原因記錄如下，之後改動這段邏輯前務必先讀過：
+  // 舊版是「只看這台裝置自己 localStorage 記錄的上次週一日期」來判斷要不要轉正，
+  // 雲端完全不知道「現在這份 weeklyJson 是哪一週的資料」。結果只要有一台裝置很久沒開、
+  // 本機紀錄停留在很舊的一週，它一打開就會誤判「該轉正了」，即使雲端的 weeklyJson
+  // 其實已經是別台裝置這週最新填好的內容——那台落後的裝置只看得到自己過期的本機紀錄，
+  // 把剛拉下來的「下週草稿」直接當成新的本週，蓋掉了雲端跟本機原本正確的資料。
+  // 修法：雲端文件現在多存一個 currentWeekKey 欄位(見 cloudPush())，代表「雲端這份
+  // weeklyJson 目前是哪一週的資料」，任何裝置轉正前一律先問這個欄位——如果雲端已經
+  // 記錄現在這週了，就代表別的裝置早就處理過，這台裝置不用也不應該再轉正一次，
+  // 就算它自己本機的舊紀錄還停留在很久以前也一樣。只有在雲端完全沒有這個欄位時
+  // (例如尚未升級過、或從來沒有 db 設定的離線使用者)，才退回用「本機自己的紀錄」判斷，
+  // 當作備用邏輯，行為跟修之前一樣。
   function weekKeyOf(dateObj){
     const y = dateObj.getFullYear();
     const m = String(dateObj.getMonth()+1).padStart(2,'0');
@@ -2239,6 +2294,10 @@
     // 「切換到下週」畫面，這時候變數是反過來的，要先判斷 viewingNextWeek 再對應。
     const draftGrid = viewingNextWeek ? weeklyGrid : otherWeekGrid;
     const draftHabit = viewingNextWeek ? habitRow : otherWeekHabitRow;
+
+    // 轉正會直接取代掉目前的本週資料，取代前先備份一份，
+    // 萬一這次轉正其實是誤判(例如這台裝置的紀錄跟雲端對不齊)，還有機會救回來。
+    backupLocalBeforeOverwrite();
 
     weeklyGrid = draftGrid;
     habitRow = draftHabit;
@@ -2272,6 +2331,28 @@
   async function checkWeekRollover(){
     const nowMonday = getMondayOfThisWeek();
     const nowKey = weekKeyOf(nowMonday);
+
+    // 優先路徑：雲端有記錄「現在這份資料是哪一週」，以雲端為準。
+    // (cloudCurrentWeekKey 由 cloudPull() 在 init() 裡、checkWeekRollover() 之前設定好。)
+    if(cloudCurrentWeekKey){
+      if(cloudCurrentWeekKey === nowKey){
+        // 雲端已經是這一週的資料了，代表這一次的轉正別的裝置早就處理過，
+        // 這台裝置不用再做一次，也把本機紀錄同步一下，避免下次又要靠備用邏輯判斷。
+        try{ localStorage.setItem(CURRENT_WEEK_KEY_STORAGE, nowKey); }catch(e){ /* 忽略 */ }
+        return false;
+      }
+      if(new Date(nowKey) < new Date(cloudCurrentWeekKey)){
+        // 這台裝置的系統時間比雲端記錄的還早(日期往回跳)，不觸發轉正。
+        return false;
+      }
+      // 雲端記錄的週一比現在還舊，代表這次轉正確實還沒有任何裝置處理過，這台裝置來做。
+      try{ localStorage.setItem(CURRENT_WEEK_KEY_STORAGE, nowKey); }catch(e){ /* 忽略 */ }
+      await promoteNextWeekToCurrent();
+      return true;
+    }
+
+    // 備用路徑：雲端還沒有 currentWeekKey 欄位(例如尚未升級過的既有帳號、或沒設定 db 的離線使用者)，
+    // 退回用「本機自己的紀錄」判斷，行為維持跟修這次 bug 之前一樣。
     let storedKey = null;
     try{ storedKey = localStorage.getItem(CURRENT_WEEK_KEY_STORAGE); }catch(e){ /* 忽略 */ }
 
